@@ -58,9 +58,7 @@ function Cheiz:AddWindow(config)
     ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 
     local protectGui = syn and syn.protect_gui or protectgui
-    if protectGui then
-        protectGui(ScreenGui)
-    end
+    if protectGui then protectGui(ScreenGui) end
     ScreenGui.Parent = TargetParent
 
     local function applyTabGradient(instance)
@@ -96,7 +94,7 @@ function Cheiz:AddWindow(config)
         grad.Parent = textLabel
     end
 
-    local elementAlpha = windowConfig.Transparent and windowConfig.BackgroundTransparency or 0
+    local mainAlpha = windowConfig.Transparent and windowConfig.BackgroundTransparency or 0
 
     local NotifHolder = Instance.new("Frame")
     NotifHolder.Name = randomizeName(8)
@@ -114,12 +112,11 @@ function Cheiz:AddWindow(config)
 
     function Cheiz:SendNotification(titleText, messageText, duration)
         local dur = duration or 1
-        
         local card = Instance.new("Frame")
         card.Size = UDim2.fromOffset(230, 52)
         card.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
         card.BorderSizePixel = 0
-        card.BackgroundTransparency = elementAlpha
+        card.BackgroundTransparency = 0
         card.Parent = NotifHolder
 
         local cardStroke = Instance.new("UIStroke")
@@ -132,9 +129,7 @@ function Cheiz:AddWindow(config)
         notifHeader.Size = UDim2.new(1, 0, 0, 20)
         notifHeader.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
         notifHeader.BorderSizePixel = 0
-        notifHeader.BackgroundTransparency = elementAlpha
         notifHeader.Parent = card
-
         applyHeaderGradient(notifHeader)
 
         local title = Instance.new("TextLabel")
@@ -163,9 +158,7 @@ function Cheiz:AddWindow(config)
         task.delay(dur, function()
             local fadeOut = TweenService:Create(card, TweenInfo.new(0.2), {BackgroundTransparency = 1})
             fadeOut:Play()
-            fadeOut.Completed:Connect(function()
-                card:Destroy()
-            end)
+            fadeOut.Completed:Connect(function() card:Destroy() end)
         end)
     end
 
@@ -175,7 +168,7 @@ function Cheiz:AddWindow(config)
     MainBase.AnchorPoint = Vector2.new(0.5, 0.55)
     MainBase.Position = UDim2.new(0.5, 0, 0.5, 0)
     MainBase.BackgroundColor3 = Color3.fromRGB(12, 14, 20)
-    MainBase.BackgroundTransparency = elementAlpha
+    MainBase.BackgroundTransparency = mainAlpha
     MainBase.BorderSizePixel = 0
     MainBase.Visible = true
     MainBase.Parent = ScreenGui
@@ -198,10 +191,9 @@ function Cheiz:AddWindow(config)
     Header.Name = randomizeName(8)
     Header.Size = UDim2.new(1, 0, 0, 36)
     Header.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    Header.BackgroundTransparency = elementAlpha
+    Header.BackgroundTransparency = 0
     Header.BorderSizePixel = 0
     Header.Parent = MainBase
-
     applyHeaderGradient(Header)
 
     local HeaderStroke = Instance.new("UIStroke")
@@ -226,7 +218,7 @@ function Cheiz:AddWindow(config)
     CloseBtn.Size = UDim2.fromOffset(24, 24)
     CloseBtn.Position = UDim2.new(1, -29, 0.5, -12)
     CloseBtn.BackgroundColor3 = Color3.fromRGB(200, 35, 35)
-    CloseBtn.BackgroundTransparency = elementAlpha
+    CloseBtn.BackgroundTransparency = 0
     CloseBtn.Text = "X"
     CloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     CloseBtn.TextSize = 13
@@ -251,7 +243,7 @@ function Cheiz:AddWindow(config)
             
             TweenService:Create(MainBase, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
                 Position = savedPosition,
-                BackgroundTransparency = elementAlpha
+                BackgroundTransparency = mainAlpha
             }):Play()
         else
             savedPosition = MainBase.Position
@@ -272,7 +264,7 @@ function Cheiz:AddWindow(config)
         FloatBtnFrame.Size = windowConfig.IconSize
         FloatBtnFrame.Position = UDim2.new(0, 20, 0.5, -20)
         FloatBtnFrame.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
-        FloatBtnFrame.BackgroundTransparency = elementAlpha
+        FloatBtnFrame.BackgroundTransparency = 0
         FloatBtnFrame.BorderSizePixel = 0
         FloatBtnFrame.ZIndex = 50
         FloatBtnFrame.Parent = ScreenGui
@@ -280,6 +272,12 @@ function Cheiz:AddWindow(config)
         local FloatCorner = Instance.new("UICorner")
         FloatCorner.CornerRadius = UDim.new(0, 8)
         FloatCorner.Parent = FloatBtnFrame
+
+        local FloatStroke = Instance.new("UIStroke")
+        FloatStroke.Color = Color3.fromRGB(0, 0, 0)
+        FloatStroke.Thickness = 1.5
+        FloatStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        FloatStroke.Parent = FloatBtnFrame
 
         if windowConfig.IconId then
             local IconImg = Instance.new("ImageLabel")
@@ -310,6 +308,16 @@ function Cheiz:AddWindow(config)
         UserInputService.InputEnded:Connect(function(input)
             if input == floatActive then 
                 if not floatDragging then
+                    -- Bounce animation on tap
+                    local origSize = windowConfig.IconSize
+                    local smallSize = UDim2.fromOffset(origSize.X.Offset * 0.82, origSize.Y.Offset * 0.82)
+                    local tweenDown = TweenService:Create(FloatBtnFrame, TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Size = smallSize})
+                    local tweenUp = TweenService:Create(FloatBtnFrame, TweenInfo.new(0.12, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Size = origSize})
+                    tweenDown:Play()
+                    tweenDown.Completed:Connect(function()
+                        tweenUp:Play()
+                    end)
+
                     toggleUI()
                 end
                 floatActive = nil 
@@ -336,7 +344,7 @@ function Cheiz:AddWindow(config)
     DialogueOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     DialogueOverlay.BackgroundTransparency = 0.5
     DialogueOverlay.Visible = false
-    DialogueOverlay.ZIndex = 80
+    DialogueOverlay.ZIndex = 200
     DialogueOverlay.Parent = ScreenGui
 
     function Cheiz:CloseDialogue()
@@ -349,7 +357,7 @@ function Cheiz:AddWindow(config)
         menuFrame.Size = config.Size and UDim2.fromOffset(config.Size.X, config.Size.Y) or UDim2.fromOffset(130, 26)
         menuFrame.Position = config.Position or UDim2.new(0, 15, 0.2, 0)
         menuFrame.BackgroundColor3 = Color3.fromRGB(15, 18, 24)
-        menuFrame.BackgroundTransparency = elementAlpha
+        menuFrame.BackgroundTransparency = 0
         menuFrame.BorderSizePixel = 0
         menuFrame.ZIndex = 60
         menuFrame.Parent = ScreenGui
@@ -437,9 +445,9 @@ function Cheiz:AddWindow(config)
         box.Size = UDim2.fromOffset(320, 180)
         box.Position = UDim2.new(0.5, -160, 0.5, -90)
         box.BackgroundColor3 = Color3.fromRGB(10, 12, 16)
-        box.BackgroundTransparency = elementAlpha
+        box.BackgroundTransparency = 0
         box.BorderSizePixel = 0
-        box.ZIndex = 81
+        box.ZIndex = 201
         box.Parent = DialogueOverlay
 
         local stroke = Instance.new("UIStroke")
@@ -448,40 +456,99 @@ function Cheiz:AddWindow(config)
         stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         stroke.Parent = box
 
+        local accent = Instance.new("Frame")
+        accent.Size = UDim2.fromOffset(4, 18)
+        accent.Position = UDim2.fromOffset(12, 12)
+        accent.BackgroundColor3 = Color3.fromRGB(20, 110, 240)
+        accent.BorderSizePixel = 0
+        accent.ZIndex = 202
+        accent.Parent = box
+
         local titleLbl = Instance.new("TextLabel")
         titleLbl.Size = UDim2.new(1, -40, 0, 18)
         titleLbl.Position = UDim2.fromOffset(22, 12)
         titleLbl.BackgroundTransparency = 1
-        titleLbl.Text = config.Title or "Dialogue"
+        titleLbl.Text = config.Title or "Dialogue Title"
         titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
         titleLbl.TextSize = 14
         titleLbl.Font = Enum.Font.GothamBold
-        titleLbl.ZIndex = 82
+        titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+        titleLbl.ZIndex = 202
         titleLbl.Parent = box
+
+        local warnTitle = (config.Warns and config.Warns.Warning) or "WARNING"
+        local warnLbl = Instance.new("TextLabel")
+        warnLbl.Size = UDim2.new(1, -24, 0, 14)
+        warnLbl.Position = UDim2.fromOffset(12, 36)
+        warnLbl.BackgroundTransparency = 1
+        warnLbl.Text = warnTitle
+        warnLbl.TextColor3 = Color3.fromRGB(20, 110, 240)
+        warnLbl.TextSize = 10
+        warnLbl.Font = Enum.Font.GothamBold
+        warnLbl.TextXAlignment = Enum.TextXAlignment.Left
+        warnLbl.ZIndex = 202
+        warnLbl.Parent = box
+
+        local warnBodyText = (config.Warns and config.Warns.Text) or ""
+        local descLbl = Instance.new("TextLabel")
+        descLbl.Size = UDim2.new(1, -24, 0, 42)
+        descLbl.Position = UDim2.fromOffset(12, 52)
+        descLbl.BackgroundTransparency = 1
+        descLbl.Text = warnBodyText
+        descLbl.TextColor3 = Color3.fromRGB(200, 205, 215)
+        descLbl.TextSize = 10
+        descLbl.TextWrapped = (config.TextWrapped == nil and true) or config.TextWrapped
+        descLbl.Font = Enum.Font.GothamBold
+        descLbl.TextXAlignment = Enum.TextXAlignment.Left
+        descLbl.ZIndex = 202
+        descLbl.Parent = box
+
+        local statsLbl = Instance.new("TextLabel")
+        statsLbl.Size = UDim2.new(1, -24, 0, 16)
+        statsLbl.Position = UDim2.fromOffset(12, 98)
+        statsLbl.BackgroundTransparency = 1
+        statsLbl.Text = "Your FPS: --  Your Ping: --"
+        statsLbl.TextColor3 = Color3.fromRGB(80, 220, 120)
+        statsLbl.TextSize = 11
+        statsLbl.Font = Enum.Font.GothamBold
+        statsLbl.TextXAlignment = Enum.TextXAlignment.Left
+        statsLbl.RichText = true
+        statsLbl.ZIndex = 202
+        statsLbl.Parent = box
+
+        task.spawn(function()
+            local fps = math.floor(workspace:GetRealPhysicsFPS())
+            local ping = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+            if config.SomeText then
+                statsLbl.Text = config.SomeText:gsub("{FPS}", tostring(fps)):gsub("{PING}", tostring(ping))
+            else
+                statsLbl.Text = string.format("Your FPS <font color=\"rgb(80,220,120)\">%d</font>  Your Ping <font color=\"rgb(80,220,120)\">%d ms</font>", fps, ping)
+            end
+        end)
 
         local btns = config.Buttons or {}
         local cancelBtn = Instance.new("TextButton")
         cancelBtn.Size = UDim2.fromOffset(135, 30)
         cancelBtn.Position = UDim2.new(0, 12, 1, -40)
         cancelBtn.BackgroundColor3 = Color3.fromRGB(35, 38, 48)
-        cancelBtn.BackgroundTransparency = elementAlpha
+        cancelBtn.BackgroundTransparency = 0
         cancelBtn.Text = (btns.Cancel and btns.Cancel.Text) or "Cancel"
         cancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         cancelBtn.TextSize = 11
         cancelBtn.Font = Enum.Font.GothamBold
-        cancelBtn.ZIndex = 82
+        cancelBtn.ZIndex = 202
         cancelBtn.Parent = box
 
         local confirmBtn = Instance.new("TextButton")
         confirmBtn.Size = UDim2.fromOffset(135, 30)
         confirmBtn.Position = UDim2.new(1, -147, 1, -40)
         confirmBtn.BackgroundColor3 = Color3.fromRGB(20, 110, 240)
-        confirmBtn.BackgroundTransparency = elementAlpha
+        confirmBtn.BackgroundTransparency = 0
         confirmBtn.Text = (btns.Confirm and btns.Confirm.Text) or "Confirm"
         confirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
         confirmBtn.TextSize = 11
         confirmBtn.Font = Enum.Font.GothamBold
-        confirmBtn.ZIndex = 82
+        confirmBtn.ZIndex = 202
         confirmBtn.Parent = box
 
         cancelBtn.MouseButton1Click:Connect(function()
@@ -501,16 +568,16 @@ function Cheiz:AddWindow(config)
     PopupOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     PopupOverlay.BackgroundTransparency = 0.5
     PopupOverlay.Visible = false
-    PopupOverlay.ZIndex = 90
+    PopupOverlay.ZIndex = 210
     PopupOverlay.Parent = ScreenGui
 
     local PopupBox = Instance.new("Frame")
     PopupBox.Size = UDim2.fromOffset(260, 120)
     PopupBox.Position = UDim2.new(0.5, -130, 0.5, -60)
     PopupBox.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
-    PopupBox.BackgroundTransparency = elementAlpha
+    PopupBox.BackgroundTransparency = 0
     PopupBox.BorderSizePixel = 0
-    PopupBox.ZIndex = 91
+    PopupBox.ZIndex = 211
     PopupBox.Parent = PopupOverlay
 
     local PopupStroke = Instance.new("UIStroke")
@@ -522,9 +589,9 @@ function Cheiz:AddWindow(config)
     local PopupHeader = Instance.new("Frame")
     PopupHeader.Size = UDim2.new(1, 0, 0, 28)
     PopupHeader.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-    PopupHeader.BackgroundTransparency = elementAlpha
+    PopupHeader.BackgroundTransparency = 0
     PopupHeader.BorderSizePixel = 0
-    PopupHeader.ZIndex = 92
+    PopupHeader.ZIndex = 212
     PopupHeader.Parent = PopupBox
     applyHeaderGradient(PopupHeader)
 
@@ -535,7 +602,7 @@ function Cheiz:AddWindow(config)
     PopupTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
     PopupTitle.TextSize = 13
     PopupTitle.Font = Enum.Font.GothamBold
-    PopupTitle.ZIndex = 93
+    PopupTitle.ZIndex = 213
     PopupTitle.Parent = PopupHeader
     applyTextGradient(PopupTitle)
 
@@ -543,24 +610,24 @@ function Cheiz:AddWindow(config)
     BackBtn.Size = UDim2.fromOffset(100, 28)
     BackBtn.Position = UDim2.new(0, 20, 1, -42)
     BackBtn.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
-    BackBtn.BackgroundTransparency = elementAlpha
+    BackBtn.BackgroundTransparency = 0
     BackBtn.Text = "Back"
     BackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     BackBtn.TextSize = 12
     BackBtn.Font = Enum.Font.GothamBold
-    BackBtn.ZIndex = 92
+    BackBtn.ZIndex = 212
     BackBtn.Parent = PopupBox
 
     local ConfirmCloseBtn = Instance.new("TextButton")
     ConfirmCloseBtn.Size = UDim2.fromOffset(100, 28)
     ConfirmCloseBtn.Position = UDim2.new(1, -120, 1, -42)
     ConfirmCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 35, 35)
-    ConfirmCloseBtn.BackgroundTransparency = elementAlpha
+    ConfirmCloseBtn.BackgroundTransparency = 0
     ConfirmCloseBtn.Text = "Close"
     ConfirmCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
     ConfirmCloseBtn.TextSize = 12
     ConfirmCloseBtn.Font = Enum.Font.GothamBold
-    ConfirmCloseBtn.ZIndex = 92
+    ConfirmCloseBtn.ZIndex = 212
     ConfirmCloseBtn.Parent = PopupBox
 
     CloseBtn.MouseButton1Click:Connect(function() PopupOverlay.Visible = true end)
@@ -597,12 +664,12 @@ function Cheiz:AddWindow(config)
             local existingGrad = btn:FindFirstChildOfClass("UIGradient")
             if name == tabName then
                 btn.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                btn.BackgroundTransparency = elementAlpha
+                btn.BackgroundTransparency = 0
                 btn.TextColor3 = Color3.fromRGB(10, 15, 30)
                 applyTabGradient(btn)
             else
                 btn.BackgroundColor3 = Color3.fromRGB(20, 24, 34)
-                btn.BackgroundTransparency = elementAlpha
+                btn.BackgroundTransparency = 0
                 btn.TextColor3 = Color3.fromRGB(150, 160, 180)
                 if existingGrad then existingGrad:Destroy() end
             end
@@ -617,7 +684,7 @@ function Cheiz:AddWindow(config)
         btn.Name = randomizeName(8)
         btn.Size = UDim2.new(0, 95, 1, 0)
         btn.BackgroundColor3 = Color3.fromRGB(20, 24, 34)
-        btn.BackgroundTransparency = elementAlpha
+        btn.BackgroundTransparency = 0
         btn.Text = tabName
         btn.TextColor3 = Color3.fromRGB(150, 160, 180)
         btn.TextSize = 13
@@ -709,10 +776,10 @@ function Cheiz:AddWindow(config)
 
         function TabAPI:AddLabel(config)
             local card = Instance.new("Frame")
-            card.Name = "Card_Label"
+            card.Name = "Card_" .. (config.Title or "Label")
             card.Size = UDim2.new(1, -4, 0, 32)
             card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
-            card.BackgroundTransparency = elementAlpha
+            card.BackgroundTransparency = 0
             card.BorderSizePixel = 0
             card.Parent = scrollPage
 
@@ -738,10 +805,10 @@ function Cheiz:AddWindow(config)
 
         function TabAPI:AddButton(config)
             local card = Instance.new("Frame")
-            card.Name = "Card_Button"
+            card.Name = "Card_" .. (config.Title or "Button")
             card.Size = UDim2.new(1, -4, 0, 34)
             card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
-            card.BackgroundTransparency = elementAlpha
+            card.BackgroundTransparency = 0
             card.BorderSizePixel = 0
             card.Parent = scrollPage
 
@@ -767,7 +834,7 @@ function Cheiz:AddWindow(config)
             actionBtn.Size = UDim2.fromOffset(100, 22)
             actionBtn.Position = UDim2.new(1, -110, 0.5, -11)
             actionBtn.BackgroundColor3 = Color3.fromRGB(25, 120, 240)
-            actionBtn.BackgroundTransparency = elementAlpha
+            actionBtn.BackgroundTransparency = 0
             actionBtn.BorderSizePixel = 0
             actionBtn.Text = config.ButtonText or "Execute"
             actionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -789,12 +856,23 @@ function Cheiz:AddWindow(config)
         end
 
         function TabAPI:AddToggle(config)
+            local titleText = config.Title or "Toggle"
+            local descText = config.Desc or ""
+            local defaultState = config.Default or false
+            local callback = config.Callback
+            local dropdownConfig = config.Dropdown
+            local keybindConfig = config.Keybind
+
+            local hasDesc = descText ~= ""
+            local baseHeight = hasDesc and 44 or 34
+
             local card = Instance.new("Frame")
-            card.Name = "Card_Toggle"
-            card.Size = UDim2.new(1, -4, 0, config.Desc and 44 or 34)
+            card.Name = "Card_" .. titleText
+            card.Size = UDim2.new(1, -4, 0, baseHeight)
             card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
-            card.BackgroundTransparency = elementAlpha
+            card.BackgroundTransparency = 0
             card.BorderSizePixel = 0
+            card.ClipsDescendants = true
             card.Parent = scrollPage
 
             local stroke = Instance.new("UIStroke")
@@ -803,38 +881,64 @@ function Cheiz:AddWindow(config)
             stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             stroke.Parent = card
 
+            local topHeader = Instance.new("Frame")
+            topHeader.Size = UDim2.new(1, 0, 0, baseHeight)
+            topHeader.BackgroundTransparency = 1
+            topHeader.Parent = card
+
             local title = Instance.new("TextLabel")
-            title.Size = UDim2.new(1, -65, 0, 16)
-            title.Position = UDim2.fromOffset(10, config.Desc and 4 or 9)
+            title.Size = UDim2.new(1, -110, 0, 16)
+            title.Position = UDim2.fromOffset(10, hasDesc and 4 or 9)
             title.BackgroundTransparency = 1
-            title.Text = config.Title or "Toggle"
+            title.Text = titleText
             title.TextColor3 = Color3.fromRGB(255, 255, 255)
             title.TextSize = 13
             title.Font = Enum.Font.GothamBold
             title.TextXAlignment = Enum.TextXAlignment.Left
-            title.Parent = card
+            title.Parent = topHeader
             applyTextGradient(title)
 
-            if config.Desc then
+            if hasDesc then
                 local desc = Instance.new("TextLabel")
-                desc.Size = UDim2.new(1, -65, 0, 14)
+                desc.Size = UDim2.new(1, -110, 0, 14)
                 desc.Position = UDim2.fromOffset(10, 22)
                 desc.BackgroundTransparency = 1
-                desc.Text = config.Desc
+                desc.Text = descText
                 desc.TextColor3 = Color3.fromRGB(130, 140, 160)
                 desc.TextSize = 10
                 desc.Font = Enum.Font.GothamBold
                 desc.TextXAlignment = Enum.TextXAlignment.Left
-                desc.Parent = card
+                desc.Parent = topHeader
+            end
+
+            local currentKey = keybindConfig and keybindConfig.Default
+            local keybindBtn = nil
+            if keybindConfig then
+                keybindBtn = Instance.new("TextButton")
+                keybindBtn.Size = UDim2.fromOffset(45, 18)
+                keybindBtn.Position = UDim2.new(1, -98, 0.5, -9)
+                keybindBtn.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
+                keybindBtn.BackgroundTransparency = 0
+                keybindBtn.Text = currentKey and currentKey.Name or "None"
+                keybindBtn.TextColor3 = Color3.fromRGB(180, 190, 210)
+                keybindBtn.TextSize = 9
+                keybindBtn.Font = Enum.Font.GothamBold
+                keybindBtn.Parent = topHeader
+                
+                local kbStroke = Instance.new("UIStroke")
+                kbStroke.Color = Color3.fromRGB(0, 0, 0)
+                kbStroke.Thickness = 1
+                kbStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                kbStroke.Parent = keybindBtn
             end
 
             local toggleBox = Instance.new("Frame")
             toggleBox.Size = UDim2.fromOffset(38, 20)
             toggleBox.Position = UDim2.new(1, -48, 0.5, -10)
-            toggleBox.BackgroundColor3 = config.Default and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(30, 35, 48)
-            toggleBox.BackgroundTransparency = elementAlpha
+            toggleBox.BackgroundColor3 = defaultState and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(30, 35, 48)
+            toggleBox.BackgroundTransparency = 0
             toggleBox.BorderSizePixel = 0
-            toggleBox.Parent = card
+            toggleBox.Parent = topHeader
 
             local boxStroke = Instance.new("UIStroke")
             boxStroke.Color = Color3.fromRGB(0, 0, 0)
@@ -844,25 +948,216 @@ function Cheiz:AddWindow(config)
 
             local knob = Instance.new("Frame")
             knob.Size = UDim2.fromOffset(14, 14)
-            knob.Position = config.Default and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
+            knob.Position = defaultState and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
             knob.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            knob.BackgroundTransparency = elementAlpha
+            knob.BackgroundTransparency = 0
             knob.BorderSizePixel = 0
             knob.Parent = toggleBox
 
             local clickBtn = Instance.new("TextButton")
-            clickBtn.Size = UDim2.fromScale(1, 1)
+            clickBtn.Size = UDim2.new(1, keybindConfig and -55 or 0, 1, 0)
             clickBtn.BackgroundTransparency = 1
             clickBtn.Text = ""
-            clickBtn.Parent = card
+            clickBtn.Parent = topHeader
 
-            local toggled = config.Default or false
-            clickBtn.MouseButton1Click:Connect(function()
-                toggled = not toggled
+            -- Nested Dropdown (When Dropdown parameter is set inside AddToggle)
+            local dropdownFrame = nil
+            local selectedValues = {}
+            if dropdownConfig then
+                dropdownFrame = Instance.new("Frame")
+                dropdownFrame.Name = "DropdownFrame"
+                dropdownFrame.Size = UDim2.new(1, -16, 0, 0)
+                dropdownFrame.Position = UDim2.fromOffset(8, baseHeight + 2)
+                dropdownFrame.BackgroundTransparency = 1
+                dropdownFrame.Parent = card
+
+                local options = dropdownConfig.Options or {}
+                local isMulti = dropdownConfig.Multi or false
+                local disableSearch = dropdownConfig.DisableSearch or false
+                local defaultOpt = dropdownConfig.Default or (isMulti and {} or options[1])
+
+                if isMulti then
+                    if type(defaultOpt) == "table" then
+                        for _, v in ipairs(defaultOpt) do selectedValues[v] = true end
+                    end
+                else
+                    if defaultOpt then selectedValues[defaultOpt] = true end
+                end
+
+                local searchBox = nil
+                local searchHeight = 0
+                if not disableSearch then
+                    searchHeight = 26
+                    searchBox = Instance.new("TextBox")
+                    searchBox.Size = UDim2.new(1, 0, 0, 24)
+                    searchBox.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+                    searchBox.Text = ""
+                    searchBox.PlaceholderText = "Search options..."
+                    searchBox.PlaceholderColor3 = Color3.fromRGB(110, 120, 140)
+                    searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    searchBox.TextSize = 11
+                    searchBox.Font = Enum.Font.GothamSemibold
+                    searchBox.Parent = dropdownFrame
+
+                    local searchFocusLine = Instance.new("Frame")
+                    searchFocusLine.Size = UDim2.new(1, 0, 0, 2)
+                    searchFocusLine.Position = UDim2.new(0, 0, 1, -2)
+                    searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+                    searchFocusLine.BorderSizePixel = 0
+                    searchFocusLine.Parent = searchBox
+
+                    searchBox.Focused:Connect(function() searchFocusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255) end)
+                    searchBox.FocusLost:Connect(function() searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220) end)
+
+                    local sStroke = Instance.new("UIStroke")
+                    sStroke.Color = Color3.fromRGB(0, 0, 0)
+                    sStroke.Thickness = 1.5
+                    sStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                    sStroke.Parent = searchBox
+                end
+
+                local gridContainer = Instance.new("ScrollingFrame")
+                gridContainer.Size = UDim2.new(1, 0, 1, -searchHeight)
+                gridContainer.Position = UDim2.fromOffset(0, searchHeight + (searchHeight > 0 and 4 or 0))
+                gridContainer.BackgroundTransparency = 1
+                gridContainer.BorderSizePixel = 0
+                gridContainer.CanvasSize = UDim2.fromScale(0, 0)
+                gridContainer.ScrollBarThickness = 2
+                gridContainer.Parent = dropdownFrame
+
+                local gridLayout = Instance.new("UIGridLayout")
+                gridLayout.CellSize = UDim2.fromOffset(128, 24)
+                gridLayout.CellPadding = UDim2.fromOffset(4, 4)
+                gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                gridLayout.Parent = gridContainer
+
+                gridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    gridContainer.CanvasSize = UDim2.fromOffset(0, gridLayout.AbsoluteContentSize.Y + 4)
+                end)
+
+                local function renderNestedOptions(filterText)
+                    for _, child in ipairs(gridContainer:GetChildren()) do
+                        if child:IsA("TextButton") then child:Destroy() end
+                    end
+
+                    local count = 0
+                    for _, opt in ipairs(options) do
+                        if filterText == "" or opt:lower():find(filterText:lower()) then
+                            count = count + 1
+                            local optBtn = Instance.new("TextButton")
+                            optBtn.Size = UDim2.fromOffset(128, 24)
+                            optBtn.BackgroundColor3 = Color3.fromRGB(12, 16, 24)
+                            optBtn.Text = ""
+                            optBtn.Parent = gridContainer
+
+                            local optStroke = Instance.new("UIStroke")
+                            optStroke.Color = Color3.fromRGB(0, 0, 0)
+                            optStroke.Thickness = 1
+                            optStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                            optStroke.Parent = optBtn
+
+                            local selected = selectedValues[opt] == true
+
+                            local selectionBox = Instance.new("Frame")
+                            selectionBox.Size = UDim2.fromOffset(12, 12)
+                            selectionBox.Position = UDim2.new(0, 5, 0.5, -6)
+                            selectionBox.BackgroundColor3 = selected and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(14, 16, 22)
+                            selectionBox.BorderSizePixel = 0
+                            selectionBox.Parent = optBtn
+
+                            local boxStroke2 = Instance.new("UIStroke")
+                            boxStroke2.Color = Color3.fromRGB(0, 0, 0)
+                            boxStroke2.Thickness = 1.5
+                            boxStroke2.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                            boxStroke2.Parent = selectionBox
+
+                            local optLabel = Instance.new("TextLabel")
+                            optLabel.Size = UDim2.new(1, -22, 1, 0)
+                            optLabel.Position = UDim2.fromOffset(20, 0)
+                            optLabel.BackgroundTransparency = 1
+                            optLabel.Text = opt
+                            optLabel.TextColor3 = selected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 180)
+                            optLabel.TextSize = 10
+                            optLabel.Font = Enum.Font.GothamSemibold
+                            optLabel.TextXAlignment = Enum.TextXAlignment.Left
+                            optLabel.Parent = optBtn
+
+                            optBtn.MouseButton1Click:Connect(function()
+                                if isMulti then
+                                    selectedValues[opt] = not selectedValues[opt]
+                                    renderNestedOptions(searchBox and searchBox.Text or "")
+                                    if dropdownConfig.Callback then
+                                        local list = {}
+                                        for k, v in pairs(selectedValues) do if v then table.insert(list, k) end end
+                                        dropdownConfig.Callback(list)
+                                    end
+                                else
+                                    selectedValues = {[opt] = true}
+                                    renderNestedOptions(searchBox and searchBox.Text or "")
+                                    if dropdownConfig.Callback then dropdownConfig.Callback(opt) end
+                                end
+                            end)
+                        end
+                    end
+                    local rows = math.ceil(count / 3)
+                    local contentH = searchHeight + (searchHeight > 0 and 4 or 0) + math.max(rows * 28, 28)
+                    dropdownFrame.Size = UDim2.new(1, -16, 0, contentH)
+                end
+
+                renderNestedOptions("")
+
+                if searchBox then
+                    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+                        renderNestedOptions(searchBox.Text)
+                    end)
+                end
+            end
+
+            local toggled = defaultState
+
+            local function updateState(newState)
+                toggled = newState
                 toggleBox.BackgroundColor3 = toggled and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(30, 35, 48)
                 knob.Position = toggled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
-                if config.Callback then config.Callback(toggled) end
+
+                if dropdownFrame then
+                    local targetHeight = toggled and (baseHeight + 6 + dropdownFrame.AbsoluteSize.Y) or baseHeight
+                    TweenService:Create(card, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(1, -4, 0, targetHeight)
+                    }):Play()
+                end
+
+                if callback then callback(toggled) end
+            end
+
+            clickBtn.MouseButton1Click:Connect(function()
+                updateState(not toggled)
             end)
+
+            if keybindConfig and keybindBtn then
+                local listening = false
+                keybindBtn.MouseButton1Click:Connect(function()
+                    if listening then return end
+                    listening = true
+                    keybindBtn.Text = "..."
+                    local conn
+                    conn = UserInputService.InputBegan:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.Keyboard then
+                            currentKey = input.KeyCode
+                            keybindBtn.Text = currentKey.Name
+                            listening = false
+                            conn:Disconnect()
+                        end
+                    end)
+                end)
+
+                UserInputService.InputBegan:Connect(function(input, gpe)
+                    if not gpe and currentKey and input.KeyCode == currentKey then
+                        updateState(not toggled)
+                    end
+                end)
+            end
+
             return card
         end
 
@@ -878,7 +1173,7 @@ function Cheiz:AddWindow(config)
             card.Name = "Card_" .. titleText
             card.Size = UDim2.new(1, -4, 0, 34)
             card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
-            card.BackgroundTransparency = elementAlpha
+            card.BackgroundTransparency = 0
             card.BorderSizePixel = 0
             card.ClipsDescendants = true
             card.Parent = scrollPage
@@ -910,14 +1205,13 @@ function Cheiz:AddWindow(config)
             triggerBtn.Size = UDim2.fromOffset(120, 22)
             triggerBtn.Position = UDim2.new(1, -130, 0.5, -11)
             triggerBtn.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
-            triggerBtn.BackgroundTransparency = elementAlpha
+            triggerBtn.BackgroundTransparency = 0
             triggerBtn.Parent = topHeader
 
             local focusLine = Instance.new("Frame")
             focusLine.Size = UDim2.new(1, 0, 0, 2)
             focusLine.Position = UDim2.new(0, 0, 1, -2)
             focusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
-            focusLine.BackgroundTransparency = elementAlpha
             focusLine.BorderSizePixel = 0
             focusLine.Parent = triggerBtn
 
@@ -969,7 +1263,7 @@ function Cheiz:AddWindow(config)
                 searchBox.Size = UDim2.new(1, 0, 0, 24)
                 searchBox.Position = UDim2.fromOffset(0, 0)
                 searchBox.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
-                searchBox.BackgroundTransparency = elementAlpha
+                searchBox.BackgroundTransparency = 0
                 searchBox.Text = ""
                 searchBox.PlaceholderText = "Search options..."
                 searchBox.PlaceholderColor3 = Color3.fromRGB(110, 120, 140)
@@ -982,16 +1276,11 @@ function Cheiz:AddWindow(config)
                 searchFocusLine.Size = UDim2.new(1, 0, 0, 2)
                 searchFocusLine.Position = UDim2.new(0, 0, 1, -2)
                 searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
-                searchFocusLine.BackgroundTransparency = elementAlpha
                 searchFocusLine.BorderSizePixel = 0
                 searchFocusLine.Parent = searchBox
 
-                searchBox.Focused:Connect(function()
-                    searchFocusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-                end)
-                searchBox.FocusLost:Connect(function()
-                    searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
-                end)
+                searchBox.Focused:Connect(function() searchFocusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255) end)
+                searchBox.FocusLost:Connect(function() searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220) end)
 
                 local searchStroke = Instance.new("UIStroke")
                 searchStroke.Color = Color3.fromRGB(0, 0, 0)
@@ -1058,7 +1347,7 @@ function Cheiz:AddWindow(config)
                         local optBtn = Instance.new("TextButton")
                         optBtn.Size = UDim2.fromOffset(128, 24)
                         optBtn.BackgroundColor3 = Color3.fromRGB(12, 16, 24)
-                        optBtn.BackgroundTransparency = elementAlpha
+                        optBtn.BackgroundTransparency = 0
                         optBtn.Text = ""
                         optBtn.Parent = gridContainer
 
@@ -1074,7 +1363,6 @@ function Cheiz:AddWindow(config)
                         selectionBox.Size = UDim2.fromOffset(12, 12)
                         selectionBox.Position = UDim2.new(0, 5, 0.5, -6)
                         selectionBox.BackgroundColor3 = selected and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(14, 16, 22)
-                        selectionBox.BackgroundTransparency = elementAlpha
                         selectionBox.BorderSizePixel = 0
                         selectionBox.Parent = optBtn
 
@@ -1147,7 +1435,7 @@ function Cheiz:AddWindow(config)
             card.Name = "Card_" .. titleText
             card.Size = UDim2.new(1, -4, 0, 34)
             card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
-            card.BackgroundTransparency = elementAlpha
+            card.BackgroundTransparency = 0
             card.BorderSizePixel = 0
             card.Parent = scrollPage
 
@@ -1173,7 +1461,7 @@ function Cheiz:AddWindow(config)
             valBox.Size = UDim2.fromOffset(48, 20)
             valBox.Position = UDim2.new(1, -170, 0.5, -10)
             valBox.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
-            valBox.BackgroundTransparency = elementAlpha
+            valBox.BackgroundTransparency = 0
             valBox.Text = tostring(defaultVal)
             valBox.TextColor3 = Color3.fromRGB(255, 255, 255)
             valBox.TextSize = 11
@@ -1184,7 +1472,6 @@ function Cheiz:AddWindow(config)
             valBoxFocusLine.Size = UDim2.new(1, 0, 0, 2)
             valBoxFocusLine.Position = UDim2.new(0, 0, 1, -2)
             valBoxFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
-            valBoxFocusLine.BackgroundTransparency = elementAlpha
             valBoxFocusLine.BorderSizePixel = 0
             valBoxFocusLine.Parent = valBox
 
@@ -1205,7 +1492,7 @@ function Cheiz:AddWindow(config)
             sliderBar.Size = UDim2.new(0, 110, 0, 8)
             sliderBar.Position = UDim2.new(1, -114, 0.5, -4)
             sliderBar.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
-            sliderBar.BackgroundTransparency = elementAlpha
+            sliderBar.BackgroundTransparency = 0
             sliderBar.BorderSizePixel = 0
             sliderBar.Parent = card
 
@@ -1218,7 +1505,6 @@ function Cheiz:AddWindow(config)
             local fill = Instance.new("Frame")
             fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
             fill.BackgroundColor3 = Color3.fromRGB(25, 120, 240)
-            fill.BackgroundTransparency = elementAlpha
             fill.BorderSizePixel = 0
             fill.Parent = sliderBar
 
@@ -1226,7 +1512,6 @@ function Cheiz:AddWindow(config)
             handle.Size = UDim2.fromOffset(6, 14)
             handle.Position = UDim2.new(1, -3, 0.5, -7)
             handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            handle.BackgroundTransparency = elementAlpha
             handle.BorderSizePixel = 0
             handle.Parent = fill
 
@@ -1312,10 +1597,10 @@ function Cheiz:AddWindow(config)
 
         function TabAPI:AddTextBox(config)
             local card = Instance.new("Frame")
-            card.Name = "Card_TextBox"
+            card.Name = "Card_" .. (config.Title or "TextBox")
             card.Size = UDim2.new(1, -4, 0, config.Desc and 52 or 42)
             card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
-            card.BackgroundTransparency = elementAlpha
+            card.BackgroundTransparency = 0
             card.BorderSizePixel = 0
             card.Parent = scrollPage
 
@@ -1341,7 +1626,7 @@ function Cheiz:AddWindow(config)
             textBoxBg.Size = UDim2.new(0, 110, 0, 24)
             textBoxBg.Position = UDim2.new(1, -118, 0.5, -12)
             textBoxBg.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
-            textBoxBg.BackgroundTransparency = elementAlpha
+            textBoxBg.BackgroundTransparency = 0
             textBoxBg.BorderSizePixel = 0
             textBoxBg.Parent = card
 
@@ -1355,7 +1640,7 @@ function Cheiz:AddWindow(config)
             focusLine.Size = UDim2.new(1, 0, 0, 2)
             focusLine.Position = UDim2.new(0, 0, 1, -2)
             focusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            focusLine.BackgroundTransparency = elementAlpha
+            focusLine.BackgroundTransparency = 1
             focusLine.BorderSizePixel = 0
             focusLine.Parent = textBoxBg
 
@@ -1385,12 +1670,14 @@ function Cheiz:AddWindow(config)
     end
 
     function Cheiz:AddSearchFeatures(config)
+        local disableSearchGlobal = config and config.DisableSearchGlobal or false
+
         local BottomFrame = Instance.new("Frame")
         BottomFrame.Name = randomizeName(8)
         BottomFrame.Size = UDim2.new(1, 0, 0, 26)
         BottomFrame.Position = UDim2.new(0, 0, 1, 8)
         BottomFrame.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
-        BottomFrame.BackgroundTransparency = elementAlpha
+        BottomFrame.BackgroundTransparency = 0
         BottomFrame.BorderSizePixel = 0
         BottomFrame.Parent = MainBase
 
@@ -1412,6 +1699,53 @@ function Cheiz:AddWindow(config)
         SearchBox.Font = Enum.Font.GothamBold
         SearchBox.TextXAlignment = Enum.TextXAlignment.Left
         SearchBox.Parent = BottomFrame
+
+        local searchFocusLine = Instance.new("Frame")
+        searchFocusLine.Size = UDim2.new(1, 0, 0, 2)
+        searchFocusLine.Position = UDim2.new(0, 0, 1, -2)
+        searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+        searchFocusLine.BorderSizePixel = 0
+        searchFocusLine.Parent = BottomFrame
+
+        SearchBox.Focused:Connect(function() searchFocusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255) end)
+        SearchBox.FocusLost:Connect(function() searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220) end)
+
+        SearchBox:GetPropertyChangedSignal("Text"):Connect(function()
+            local filterText = SearchBox.Text:lower()
+            if disableSearchGlobal then
+                -- DisableSearchGlobal = true: Only search inside currently active tab
+                for name, page in pairs(Pages) do
+                    if name == ActiveTab then
+                        for _, child in ipairs(page:GetChildren()) do
+                            if child:IsA("Frame") and child.Name:find("Card_") then
+                                child.Visible = (filterText == "" or child.Name:lower():find(filterText))
+                            end
+                        end
+                    end
+                end
+            else
+                -- DisableSearchGlobal = false: Search through all tabs and switch tab if match found
+                local firstMatchTab = nil
+                for name, page in pairs(Pages) do
+                    local tabMatched = false
+                    for _, child in ipairs(page:GetChildren()) do
+                        if child:IsA("Frame") and child.Name:find("Card_") then
+                            local matched = (filterText == "" or child.Name:lower():find(filterText))
+                            child.Visible = matched
+                            if matched and filterText ~= "" then
+                                tabMatched = true
+                            end
+                        end
+                    end
+                    if tabMatched and not firstMatchTab then
+                        firstMatchTab = name
+                    end
+                end
+                if firstMatchTab and filterText ~= "" and firstMatchTab ~= ActiveTab then
+                    SwitchTab(firstMatchTab)
+                end
+            end
+        end)
     end
 
     local activeInput, dragStart, startPos, isDragging = nil, nil, nil, false
