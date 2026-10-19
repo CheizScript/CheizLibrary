@@ -857,6 +857,7 @@ function Cheiz:CreateTab(tabName)
                         local targetH = 34
                         if child.Name:find("Toggle") then targetH = 44 end
                         if child.Name:find("Slider") then targetH = 50 end
+                        if child.Name:find("TextBox") then targetH = (child.AbsoluteSize.Y > 40 and 52 or 42) end
                         TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                             Size = UDim2.new(1, -4, 0, targetH)
                         }):Play()
@@ -876,7 +877,7 @@ function Cheiz:CreateTab(tabName)
         local sectionObj = {
             SetTitle = function(self, newText)
                 sectionTitle = newText
-                sectionBtn.Text = (expanded and "v " or "> ") + newText
+                sectionBtn.Text = (expanded and "v " or "> ") .. newText
             end
         }
         return sectionObj
@@ -999,7 +1000,7 @@ function Cheiz:CreateTab(tabName)
         local hasDesc = descText ~= ""
         local hasDropdown = dropdownConfig and dropdownConfig.Options ~= nil
         local baseHeight = hasDesc and 44 or 34
-        
+
         local card = Instance.new("Frame")
         card.Name = "Card_Toggle_" .. titleText
         card.Size = UDim2.new(1, -4, 0, baseHeight)
@@ -1224,7 +1225,7 @@ function Cheiz:CreateTab(tabName)
         local callback = config.Callback
 
         local hasDesc = descText ~= ""
-        local baseHeight = hasDesc ? 48 : 40
+        local baseHeight = hasDesc and 48 or 40
 
         local card = Instance.new("Frame")
         card.Name = "Card_Slider_" .. titleText
@@ -1353,6 +1354,102 @@ function Cheiz:CreateTab(tabName)
                 titleText = newText
                 title.Text = newText
                 card.Name = "Card_Slider_" .. newText
+            end
+        }
+    end
+
+    function TabAPI:AddTextBox(config)
+        local titleText = config.Title or "TextBox"
+        local descText = config.Desc or ""
+        local placeholderText = config.Placeholder or "Type here..."
+        local defaultText = config.Default or ""
+        local callback = config.Callback
+
+        local hasDesc = descText ~= ""
+        local baseHeight = hasDesc and 52 or 42
+
+        local card = Instance.new("Frame")
+        card.Name = "Card_TextBox_" .. titleText
+        card.Size = UDim2.new(1, -4, 0, baseHeight)
+        card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
+        card.BackgroundTransparency = Cheiz.WindowConfig.Transparent and Cheiz.WindowConfig.BackgroundTransparency or 0
+        card.BorderSizePixel = 0
+        card.ClipsDescendants = true
+        card.Parent = scrollPage
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(0, 0, 0)
+        stroke.Thickness = 1.5
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = card
+
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1, -120, 0, 16)
+        title.Position = UDim2.fromOffset(10, hasDesc and 4 or 6)
+        title.BackgroundTransparency = 1
+        title.Text = titleText
+        title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        title.TextSize = 13
+        title.Font = Enum.Font.GothamBold
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Parent = card
+        applyTextGradient(title)
+
+        if hasDesc then
+            local desc = Instance.new("TextLabel")
+            desc.Size = UDim2.new(1, -120, 0, 14)
+            desc.Position = UDim2.fromOffset(10, 20)
+            desc.BackgroundTransparency = 1
+            desc.Text = descText
+            desc.TextColor3 = Color3.fromRGB(130, 140, 160)
+            desc.TextSize = 10
+            desc.Font = Enum.Font.GothamBold
+            desc.TextXAlignment = Enum.TextXAlignment.Left
+            desc.Parent = card
+        end
+
+        local textBoxBg = Instance.new("Frame")
+        textBoxBg.Size = UDim2.new(0, 110, 0, 24)
+        textBoxBg.Position = UDim2.new(1, -118, 0.5, -12)
+        textBoxBg.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
+        textBoxBg.BackgroundTransparency = Cheiz.WindowConfig.Transparent and Cheiz.WindowConfig.BackgroundTransparency or 0
+        textBoxBg.BorderSizePixel = 0
+        textBoxBg.Parent = card
+
+        local boxStroke = Instance.new("UIStroke")
+        boxStroke.Color = Color3.fromRGB(0, 0, 0)
+        boxStroke.Thickness = 1
+        boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        boxStroke.Parent = textBoxBg
+
+        local boxCorner = Instance.new("UICorner")
+        boxCorner.CornerRadius = UDim.new(0, 4)
+        boxCorner.Parent = textBoxBg
+
+        local textInput = Instance.new("TextBox")
+        textInput.Size = UDim2.new(1, -10, 1, 0)
+        textInput.Position = UDim2.fromOffset(5, 0)
+        textInput.BackgroundTransparency = 1
+        textInput.Text = defaultText
+        textInput.PlaceholderText = placeholderText
+        textInput.PlaceholderColor3 = Color3.fromRGB(110, 120, 140)
+        textInput.TextColor3 = Color3.fromRGB(255, 255, 255)
+        textInput.TextSize = 11
+        textInput.Font = Enum.Font.GothamBold
+        textInput.TextXAlignment = Enum.TextXAlignment.Left
+        textInput.Parent = textBoxBg
+
+        textInput.FocusLost:Connect(function(enterPressed)
+            if callback then
+                callback(textInput.Text, enterPressed)
+            end
+        end)
+
+        return {
+            SetTitle = function(self, newText)
+                titleText = newText
+                title.Text = newText
+                card.Name = "Card_TextBox_" .. newText
             end
         }
     end
