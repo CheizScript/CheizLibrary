@@ -166,6 +166,143 @@ function Cheiz:AddWindow(config)
         end)
     end
 
+    local DialogueOverlay = Instance.new("Frame")
+    DialogueOverlay.Name = randomizeName(8)
+    DialogueOverlay.Size = UDim2.fromScale(1, 1)
+    DialogueOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    DialogueOverlay.BackgroundTransparency = 0.5
+    DialogueOverlay.Visible = false
+    DialogueOverlay.ZIndex = 200
+    DialogueOverlay.Parent = ScreenGui
+
+    function Cheiz:CloseDialogue()
+        DialogueOverlay.Visible = false
+    end
+
+    function Cheiz:CreateDialogue(config)
+        DialogueOverlay.Visible = true
+        for _, child in ipairs(DialogueOverlay:GetChildren()) do child:Destroy() end
+
+        local box = Instance.new("Frame")
+        box.Size = UDim2.fromOffset(320, 180)
+        box.Position = UDim2.new(0.5, -160, 0.5, -90)
+        box.BackgroundColor3 = Color3.fromRGB(10, 12, 16)
+        box.BackgroundTransparency = 0
+        box.BorderSizePixel = 0
+        box.ZIndex = 201
+        box.Parent = DialogueOverlay
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(30, 35, 48)
+        stroke.Thickness = 1.5
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = box
+
+        local accent = Instance.new("Frame")
+        accent.Size = UDim2.fromOffset(4, 18)
+        accent.Position = UDim2.fromOffset(12, 12)
+        accent.BackgroundColor3 = Color3.fromRGB(20, 110, 240)
+        accent.BorderSizePixel = 0
+        accent.ZIndex = 202
+        accent.Parent = box
+
+        local titleLbl = Instance.new("TextLabel")
+        titleLbl.Size = UDim2.new(1, -40, 0, 18)
+        titleLbl.Position = UDim2.fromOffset(22, 12)
+        titleLbl.BackgroundTransparency = 1
+        titleLbl.Text = config.Title or "Dialogue Title"
+        titleLbl.TextColor3 = Color3.fromRGB(255, 255, 255)
+        titleLbl.TextSize = 14
+        titleLbl.Font = Enum.Font.GothamBold
+        titleLbl.TextXAlignment = Enum.TextXAlignment.Left
+        titleLbl.ZIndex = 202
+        titleLbl.Parent = box
+
+        local warnTitle = (config.Warns and config.Warns.Warning) or "WARNING"
+        local warnLbl = Instance.new("TextLabel")
+        warnLbl.Size = UDim2.new(1, -24, 0, 14)
+        warnLbl.Position = UDim2.fromOffset(12, 36)
+        warnLbl.BackgroundTransparency = 1
+        warnLbl.Text = warnTitle
+        warnLbl.TextColor3 = Color3.fromRGB(20, 110, 240)
+        warnLbl.TextSize = 10
+        warnLbl.Font = Enum.Font.GothamBold
+        warnLbl.TextXAlignment = Enum.TextXAlignment.Left
+        warnLbl.ZIndex = 202
+        warnLbl.Parent = box
+
+        local warnBodyText = (config.Warns and config.Warns.Text) or ""
+        local descLbl = Instance.new("TextLabel")
+        descLbl.Size = UDim2.new(1, -24, 0, 42)
+        descLbl.Position = UDim2.fromOffset(12, 52)
+        descLbl.BackgroundTransparency = 1
+        descLbl.Text = warnBodyText
+        descLbl.TextColor3 = Color3.fromRGB(200, 205, 215)
+        descLbl.TextSize = 10
+        descLbl.TextWrapped = (config.TextWrapped == nil and true) or config.TextWrapped
+        descLbl.Font = Enum.Font.GothamBold
+        descLbl.TextXAlignment = Enum.TextXAlignment.Left
+        descLbl.ZIndex = 202
+        descLbl.Parent = box
+
+        local statsLbl = Instance.new("TextLabel")
+        statsLbl.Size = UDim2.new(1, -24, 0, 16)
+        statsLbl.Position = UDim2.fromOffset(12, 98)
+        statsLbl.BackgroundTransparency = 1
+        statsLbl.Text = "Your FPS: --"
+        statsLbl.TextColor3 = Color3.fromRGB(80, 220, 120)
+        statsLbl.TextSize = 11
+        statsLbl.Font = Enum.Font.GothamBold
+        statsLbl.TextXAlignment = Enum.TextXAlignment.Left
+        statsLbl.RichText = true
+        statsLbl.ZIndex = 202
+        statsLbl.Parent = box
+
+        task.spawn(function()
+            local fps = math.floor(workspace:GetRealPhysicsFPS())
+            if config.SomeText then
+                statsLbl.Text = config.SomeText:gsub("{FPS}", tostring(fps))
+            else
+                statsLbl.Text = string.format("Your FPS <font color=\"rgb(80,220,120)\">%d</font>", fps)
+            end
+        end)
+
+        local btns = config.Buttons or {}
+        local cancelBtn = Instance.new("TextButton")
+        cancelBtn.Size = UDim2.fromOffset(135, 30)
+        cancelBtn.Position = UDim2.new(0, 12, 1, -40)
+        cancelBtn.BackgroundColor3 = Color3.fromRGB(35, 38, 48)
+        cancelBtn.BackgroundTransparency = 0
+        cancelBtn.Text = (btns.Cancel and btns.Cancel.Text) or "Cancel"
+        cancelBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        cancelBtn.TextSize = 11
+        cancelBtn.Font = Enum.Font.GothamBold
+        cancelBtn.ZIndex = 202
+        cancelBtn.Parent = box
+
+        local confirmBtn = Instance.new("TextButton")
+        confirmBtn.Size = UDim2.fromOffset(135, 30)
+        confirmBtn.Position = UDim2.new(1, -147, 1, -40)
+        confirmBtn.BackgroundColor3 = Color3.fromRGB(20, 110, 240)
+        confirmBtn.BackgroundTransparency = 0
+        confirmBtn.Text = (btns.Confirm and btns.Confirm.Text) or "Confirm"
+        confirmBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+        confirmBtn.TextSize = 11
+        confirmBtn.Font = Enum.Font.GothamBold
+        confirmBtn.ZIndex = 202
+        confirmBtn.Parent = box
+
+        cancelBtn.MouseButton1Click:Connect(function()
+            Cheiz:CloseDialogue()
+            if btns.Cancel and btns.Cancel.Callback then btns.Cancel.Callback() end
+        end)
+
+        confirmBtn.MouseButton1Click:Connect(function()
+            Cheiz:CloseDialogue()
+            if btns.Confirm and btns.Confirm.Callback then btns.Confirm.Callback() end
+        end)
+    end
+
     local MainBase = Instance.new("Frame")
     MainBase.Name = randomizeName(8)
     MainBase.Size = UDim2.fromOffset(430, 300)
@@ -339,19 +476,6 @@ function Cheiz:AddWindow(config)
         end)
     end
 
-    local DialogueOverlay = Instance.new("Frame")
-    DialogueOverlay.Name = randomizeName(8)
-    DialogueOverlay.Size = UDim2.fromScale(1, 1)
-    DialogueOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    DialogueOverlay.BackgroundTransparency = 0.5
-    DialogueOverlay.Visible = false
-    DialogueOverlay.ZIndex = 200
-    DialogueOverlay.Parent = ScreenGui
-
-    function Cheiz:CloseDialogue()
-        DialogueOverlay.Visible = false
-    end
-
     function Cheiz:AddFloatingMenu(config)
         local menuFrame = Instance.new("Frame")
         menuFrame.Name = randomizeName(8)
@@ -462,6 +586,78 @@ function Cheiz:AddWindow(config)
 
         return menuFrame
     end
+
+    local PopupOverlay = Instance.new("Frame")
+    PopupOverlay.Name = randomizeName(8)
+    PopupOverlay.Size = UDim2.fromScale(1, 1)
+    PopupOverlay.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    PopupOverlay.BackgroundTransparency = 0.5
+    PopupOverlay.Visible = false
+    PopupOverlay.ZIndex = 210
+    PopupOverlay.Parent = ScreenGui
+
+    local PopupBox = Instance.new("Frame")
+    PopupBox.Size = UDim2.fromOffset(260, 120)
+    PopupBox.Position = UDim2.new(0.5, -130, 0.5, -60)
+    PopupBox.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
+    PopupBox.BackgroundTransparency = 0
+    PopupBox.BorderSizePixel = 0
+    PopupBox.ZIndex = 211
+    PopupBox.Parent = PopupOverlay
+
+    local PopupStroke = Instance.new("UIStroke")
+    PopupStroke.Color = Color3.fromRGB(20, 110, 240)
+    PopupStroke.Thickness = 2
+    PopupStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    PopupStroke.Parent = PopupBox
+
+    local PopupHeader = Instance.new("Frame")
+    PopupHeader.Size = UDim2.new(1, 0, 0, 28)
+    PopupHeader.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+    PopupHeader.BackgroundTransparency = 0
+    PopupHeader.BorderSizePixel = 0
+    PopupHeader.ZIndex = 212
+    PopupHeader.Parent = PopupBox
+    applyHeaderGradient(PopupHeader)
+
+    local PopupTitle = Instance.new("TextLabel")
+    PopupTitle.Size = UDim2.fromScale(1, 1)
+    PopupTitle.BackgroundTransparency = 1
+    PopupTitle.Text = "Close Script?"
+    PopupTitle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    PopupTitle.TextSize = 13
+    PopupTitle.Font = Enum.Font.GothamBold
+    PopupTitle.ZIndex = 213
+    PopupTitle.Parent = PopupHeader
+    applyTextGradient(PopupTitle)
+
+    local BackBtn = Instance.new("TextButton")
+    BackBtn.Size = UDim2.fromOffset(100, 28)
+    BackBtn.Position = UDim2.new(0, 20, 1, -42)
+    BackBtn.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
+    BackBtn.BackgroundTransparency = 0
+    BackBtn.Text = "Back"
+    BackBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    BackBtn.TextSize = 12
+    BackBtn.Font = Enum.Font.GothamBold
+    BackBtn.ZIndex = 212
+    BackBtn.Parent = PopupBox
+
+    local ConfirmCloseBtn = Instance.new("TextButton")
+    ConfirmCloseBtn.Size = UDim2.fromOffset(100, 28)
+    ConfirmCloseBtn.Position = UDim2.new(1, -120, 1, -42)
+    ConfirmCloseBtn.BackgroundColor3 = Color3.fromRGB(200, 35, 35)
+    ConfirmCloseBtn.BackgroundTransparency = 0
+    ConfirmCloseBtn.Text = "Close"
+    ConfirmCloseBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
+    ConfirmCloseBtn.TextSize = 12
+    ConfirmCloseBtn.Font = Enum.Font.GothamBold
+    ConfirmCloseBtn.ZIndex = 212
+    ConfirmCloseBtn.Parent = PopupBox
+
+    CloseBtn.MouseButton1Click:Connect(function() PopupOverlay.Visible = true end)
+    BackBtn.MouseButton1Click:Connect(function() PopupOverlay.Visible = false end)
+    ConfirmCloseBtn.MouseButton1Click:Connect(function() ScreenGui:Destroy() end)
 
     local TabBar = Instance.new("Frame")
     TabBar.Name = randomizeName(8)
@@ -1594,7 +1790,7 @@ function Cheiz:AddWindow(config)
                     updateFromInput(input.Position.X)
                 end
             end)
-
+            
             UserInputService.InputEnded:Connect(function(input)
                 if input == activeInput then
                     activeInput = nil
