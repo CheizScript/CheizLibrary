@@ -1010,12 +1010,15 @@ function Cheiz:AddWindow(config)
             clickBtn.Text = ""
             clickBtn.Parent = topHeader
 
-            -- Dropdown that APPEARS ONLY WHEN TOGGLE IS ON (Full Window Width Style!)
+            -- Dropdown Container inside Toggle (Matches Window Width & Stays Collapsed until Clicked)
             local dropContainer = nil
             local dropExpandedHeight = 0
+            local dropIsOpen = false
+
             if dropdownConfig then
                 local options = dropdownConfig.Options or {}
                 local isMulti = dropdownConfig.Multi or false
+                local disableSearch = dropdownConfig.DisableSearch or false
                 local defaultOpt = dropdownConfig.Default or (isMulti and {} or options[1])
                 local selectedValues = {}
 
@@ -1034,18 +1037,24 @@ function Cheiz:AddWindow(config)
                 dropContainer.ClipsDescendants = true
                 dropContainer.Parent = card
 
-                local dropTrigger = Instance.new("TextButton")
-                dropTrigger.Size = UDim2.new(1, 0, 0, 26)
-                dropTrigger.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
-                dropTrigger.BackgroundTransparency = 0
-                dropTrigger.Text = ""
-                dropTrigger.Parent = dropContainer
+                local triggerBtn = Instance.new("Frame")
+                triggerBtn.Size = UDim2.new(1, 0, 0, 26)
+                triggerBtn.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+                triggerBtn.BackgroundTransparency = 0
+                triggerBtn.Parent = dropContainer
 
-                local dtStroke = Instance.new("UIStroke")
-                dtStroke.Color = Color3.fromRGB(0, 0, 0)
-                dtStroke.Thickness = 1.5
-                dtStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                dtStroke.Parent = dropTrigger
+                local focusLine = Instance.new("Frame")
+                focusLine.Size = UDim2.new(1, 0, 0, 2)
+                focusLine.Position = UDim2.new(0, 0, 1, -2)
+                focusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+                focusLine.BorderSizePixel = 0
+                focusLine.Parent = triggerBtn
+
+                local triggerStroke = Instance.new("UIStroke")
+                triggerStroke.Color = Color3.fromRGB(0, 0, 0)
+                triggerStroke.Thickness = 1.5
+                triggerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                triggerStroke.Parent = triggerBtn
 
                 local function getDropText()
                     if isMulti then
@@ -1058,92 +1067,201 @@ function Cheiz:AddWindow(config)
                     end
                 end
 
-                local dropLabel = Instance.new("TextLabel")
-                dropLabel.Size = UDim2.new(1, -24, 1, 0)
-                dropLabel.Position = UDim2.fromOffset(8, 0)
-                dropLabel.BackgroundTransparency = 1
-                dropLabel.Text = getDropText()
-                dropLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-                dropLabel.TextSize = 11
-                dropLabel.Font = Enum.Font.GothamBold
-                dropLabel.TextXAlignment = Enum.TextXAlignment.Left
-                dropLabel.Parent = dropTrigger
+                local labelText = Instance.new("TextLabel")
+                labelText.Size = UDim2.new(1, -24, 1, 0)
+                labelText.Position = UDim2.fromOffset(6, 0)
+                labelText.BackgroundTransparency = 1
+                labelText.Text = getDropText()
+                labelText.TextColor3 = Color3.fromRGB(255, 255, 255)
+                labelText.TextSize = 11
+                labelText.Font = Enum.Font.GothamSemibold
+                labelText.TextXAlignment = Enum.TextXAlignment.Left
+                labelText.Parent = triggerBtn
+                applyTextGradient(labelText)
 
-                local dropArrow = Instance.new("TextLabel")
-                dropArrow.Size = UDim2.fromOffset(16, 16)
-                dropArrow.Position = UDim2.new(1, -18, 0.5, -8)
-                dropArrow.BackgroundTransparency = 1
-                dropArrow.Text = "v"
-                dropArrow.TextColor3 = Color3.fromRGB(20, 110, 240)
-                dropArrow.TextSize = 11
-                dropArrow.Font = Enum.Font.GothamBold
-                dropArrow.Parent = dropTrigger
+                local arrowText = Instance.new("TextLabel")
+                arrowText.Size = UDim2.new(0, 16, 1, 0)
+                arrowText.Position = UDim2.new(1, -18, 0, 0)
+                arrowText.BackgroundTransparency = 1
+                arrowText.Text = "v"
+                arrowText.TextColor3 = Color3.fromRGB(20, 110, 240)
+                arrowText.TextSize = 12
+                arrowText.Font = Enum.Font.GothamSemibold
+                arrowText.Parent = triggerBtn
 
-                local optionsListFrame = Instance.new("ScrollingFrame")
-                optionsListFrame.Size = UDim2.new(1, 0, 0, 0)
-                optionsListFrame.Position = UDim2.fromOffset(0, 30)
-                optionsListFrame.BackgroundTransparency = 1
-                optionsListFrame.BorderSizePixel = 0
-                optionsListFrame.CanvasSize = UDim2.fromScale(0, 0)
-                optionsListFrame.ScrollBarThickness = 2
-                optionsListFrame.Parent = dropContainer
+                local dropClickArea = Instance.new("TextButton")
+                dropClickArea.Size = UDim2.fromScale(1, 1)
+                dropClickArea.BackgroundTransparency = 1
+                dropClickArea.Text = ""
+                dropClickArea.Parent = triggerBtn
 
-                local optListLayout = Instance.new("UIListLayout")
-                optListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-                optListLayout.Padding = UDim.new(0, 3)
-                optListLayout.Parent = optionsListFrame
+                local expandedContent = Instance.new("Frame")
+                expandedContent.Size = UDim2.new(1, 0, 0, 0)
+                expandedContent.Position = UDim2.fromOffset(0, 30)
+                expandedContent.BackgroundTransparency = 1
+                expandedContent.Parent = dropContainer
 
-                optListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-                    optionsListFrame.CanvasSize = UDim2.fromOffset(0, optListLayout.AbsoluteContentSize.Y + 4)
+                local searchBox = nil
+                local searchHeight = 0
+                if not disableSearch then
+                    searchHeight = 26
+                    searchBox = Instance.new("TextBox")
+                    searchBox.Size = UDim2.new(1, 0, 0, 24)
+                    searchBox.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+                    searchBox.BackgroundTransparency = 0
+                    searchBox.Text = ""
+                    searchBox.PlaceholderText = "Search options..."
+                    searchBox.PlaceholderColor3 = Color3.fromRGB(110, 120, 140)
+                    searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+                    searchBox.TextSize = 11
+                    searchBox.Font = Enum.Font.GothamSemibold
+                    searchBox.Parent = expandedContent
+
+                    local searchFocusLine = Instance.new("Frame")
+                    searchFocusLine.Size = UDim2.new(1, 0, 0, 2)
+                    searchFocusLine.Position = UDim2.new(0, 0, 1, -2)
+                    searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+                    searchFocusLine.BorderSizePixel = 0
+                    searchFocusLine.Parent = searchBox
+
+                    searchBox.Focused:Connect(function() searchFocusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255) end)
+                    searchBox.FocusLost:Connect(function() searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220) end)
+
+                    local sStroke = Instance.new("UIStroke")
+                    sStroke.Color = Color3.fromRGB(0, 0, 0)
+                    sStroke.Thickness = 1.5
+                    sStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                    sStroke.Parent = searchBox
+                end
+
+                local gridContainer = Instance.new("ScrollingFrame")
+                gridContainer.Size = UDim2.new(1, 0, 1, -searchHeight)
+                gridContainer.Position = UDim2.fromOffset(0, searchHeight + (searchHeight > 0 and 4 or 0))
+                gridContainer.BackgroundTransparency = 1
+                gridContainer.BorderSizePixel = 0
+                gridContainer.CanvasSize = UDim2.fromScale(0, 0)
+                gridContainer.ScrollBarThickness = 2
+                gridContainer.Parent = expandedContent
+
+                local gridLayout = Instance.new("UIGridLayout")
+                gridLayout.CellSize = UDim2.fromOffset(128, 24)
+                gridLayout.CellPadding = UDim2.fromOffset(4, 4)
+                gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+                gridLayout.Parent = gridContainer
+
+                gridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                    gridContainer.CanvasSize = UDim2.fromOffset(0, gridLayout.AbsoluteContentSize.Y + 4)
                 end)
 
-                for _, opt in ipairs(options) do
-                    local optBtn = Instance.new("TextButton")
-                    optBtn.Size = UDim2.new(1, 0, 0, 24)
-                    local isSelected = selectedValues[opt] == true
-                    optBtn.BackgroundColor3 = isSelected and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
-                    optBtn.BackgroundTransparency = 0
-                    optBtn.Text = "  " .. opt
-                    optBtn.TextColor3 = isSelected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
-                    optBtn.TextSize = 11
-                    optBtn.Font = Enum.Font.GothamBold
-                    optBtn.TextXAlignment = Enum.TextXAlignment.Left
-                    optBtn.Parent = optionsListFrame
+                local function renderNestedOptions(filterText)
+                    for _, child in ipairs(gridContainer:GetChildren()) do
+                        if child:IsA("TextButton") then child:Destroy() end
+                    end
 
-                    local optStroke = Instance.new("UIStroke")
-                    optStroke.Color = Color3.fromRGB(0, 0, 0)
-                    optStroke.Thickness = 1
-                    optStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                    optStroke.Parent = optBtn
+                    local filteredCount = 0
+                    for _, opt in ipairs(options) do
+                        if filterText == "" or opt:lower():find(filterText:lower()) then
+                            filteredCount = filteredCount + 1
+                            local optBtn = Instance.new("TextButton")
+                            optBtn.Size = UDim2.fromOffset(128, 24)
+                            optBtn.BackgroundColor3 = Color3.fromRGB(12, 16, 24)
+                            optBtn.BackgroundTransparency = 0
+                            optBtn.Text = ""
+                            optBtn.Parent = gridContainer
 
-                    optBtn.MouseButton1Click:Connect(function()
-                        if isMulti then
-                            selectedValues[opt] = not selectedValues[opt]
-                            local sel = selectedValues[opt]
-                            optBtn.BackgroundColor3 = sel and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
-                            optBtn.TextColor3 = sel and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
-                            dropLabel.Text = getDropText()
-                            if dropdownConfig.Callback then
-                                local list = {}
-                                for k, v in pairs(selectedValues) do if v then table.insert(list, k) end end
-                                dropdownConfig.Callback(list)
-                            end
-                        else
-                            selectedValues = {[opt] = true}
-                            dropLabel.Text = getDropText()
-                            for _, child in ipairs(optionsListFrame:GetChildren()) do
-                                if child:IsA("TextButton") then
-                                    local match = (child.Text:gsub("^%s*", "") == opt)
-                                    child.BackgroundColor3 = match and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
-                                    child.TextColor3 = match and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
+                            local optStroke = Instance.new("UIStroke")
+                            optStroke.Color = Color3.fromRGB(0, 0, 0)
+                            optStroke.Thickness = 1
+                            optStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                            optStroke.Parent = optBtn
+
+                            local selected = selectedValues[opt] == true
+
+                            local selectionBox = Instance.new("Frame")
+                            selectionBox.Size = UDim2.fromOffset(12, 12)
+                            selectionBox.Position = UDim2.new(0, 5, 0.5, -6)
+                            selectionBox.BackgroundColor3 = selected and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(14, 16, 22)
+                            selectionBox.BorderSizePixel = 0
+                            selectionBox.Parent = optBtn
+
+                            local boxStroke2 = Instance.new("UIStroke")
+                            boxStroke2.Color = Color3.fromRGB(0, 0, 0)
+                            boxStroke2.Thickness = 1.5
+                            boxStroke2.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                            boxStroke2.Parent = selectionBox
+
+                            local optLabel = Instance.new("TextLabel")
+                            optLabel.Size = UDim2.new(1, -22, 1, 0)
+                            optLabel.Position = UDim2.fromOffset(20, 0)
+                            optLabel.BackgroundTransparency = 1
+                            optLabel.Text = opt
+                            optLabel.TextColor3 = selected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 180)
+                            optLabel.TextSize = 10
+                            optLabel.Font = Enum.Font.GothamSemibold
+                            optLabel.TextXAlignment = Enum.TextXAlignment.Left
+                            optLabel.Parent = optBtn
+
+                            optBtn.MouseButton1Click:Connect(function()
+                                if isMulti then
+                                    selectedValues[opt] = not selectedValues[opt]
+                                    labelText.Text = getDropText()
+                                    renderNestedOptions(searchBox and searchBox.Text or "")
+                                    if dropdownConfig.Callback then
+                                        local list = {}
+                                        for k, v in pairs(selectedValues) do if v then table.insert(list, k) end end
+                                        dropdownConfig.Callback(list)
+                                    end
+                                else
+                                    selectedValues = {[opt] = true}
+                                    labelText.Text = opt
+                                    renderNestedOptions(searchBox and searchBox.Text or "")
+                                    -- Close dropdown on single select
+                                    dropIsOpen = false
+                                    arrowText.Text = "v"
+                                    local totalH = 30 + searchHeight + (searchHeight > 0 and 4 or 0) + math.max(math.ceil(filteredCount / 3) * 28, 28)
+                                    TweenService:Create(card, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                        Size = UDim2.new(1, -4, 0, baseHeight + 36)
+                                    }):Play()
+                                    TweenService:Create(dropContainer, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                        Size = UDim2.new(1, -16, 0, 30)
+                                    }):Play()
+                                    if dropdownConfig.Callback then dropdownConfig.Callback(opt) end
                                 end
-                            end
-                            if dropdownConfig.Callback then dropdownConfig.Callback(opt) end
+                            end)
                         end
+                    end
+
+                    local rows = math.ceil(filteredCount / 3)
+                    local gridH = math.max(rows * 28, 28)
+                    expandedContent.Size = UDim2.new(1, 0, 0, searchHeight + (searchHeight > 0 and 4 or 0) + gridH)
+                end
+
+                renderNestedOptions("")
+
+                if searchBox then
+                    searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+                        renderNestedOptions(searchBox.Text)
                     end)
                 end
 
-                dropExpandedHeight = 26 + math.min(#options * 27, 100) + 6
+                dropClickArea.MouseButton1Click:Connect(function()
+                    dropIsOpen = not dropIsOpen
+                    arrowText.Text = dropIsOpen and "^" or "v"
+
+                    local rows = math.ceil(#options / 3)
+                    local contentH = searchHeight + (searchHeight > 0 and 4 or 0) + math.max(rows * 28, 28)
+                    local fullDropH = 30 + contentH
+
+                    local targetCardH = dropIsOpen and (baseHeight + fullDropH + 6) or (baseHeight + 36)
+                    local targetDropH = dropIsOpen and fullDropH or 30
+
+                    TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(1, -4, 0, targetCardH)
+                    }):Play()
+                    TweenService:Create(dropContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                        Size = UDim2.new(1, -16, 0, targetDropH)
+                    }):Play()
+                end)
             end
 
             local toggled = defaultState
@@ -1154,22 +1272,42 @@ function Cheiz:AddWindow(config)
                 knob.Position = toggled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
 
                 if dropContainer then
-                    local targetH = toggled and (baseHeight + dropExpandedHeight + 4) or baseHeight
-                    TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(1, -4, 0, targetH)
-                    }):Play()
-                    TweenService:Create(dropContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(1, -16, 0, toggled and dropExpandedHeight or 0)
-                    }):Play()
+                    if toggled then
+                        dropIsOpen = false -- Keep collapsed by default when turned ON
+                        local targetCardH = baseHeight + 36
+                        TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            Size = UDim2.new(1, -4, 0, targetCardH)
+                        }):Play()
+                        TweenService:Create(dropContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            Size = UDim2.new(1, -16, 0, 30)
+                        }):Play()
+                        dropContainer.Visible = true
+                    else
+                        dropIsOpen = false
+                        TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            Size = UDim2.new(1, -4, 0, baseHeight)
+                        }):Play()
+                        TweenService:Create(dropContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            Size = UDim2.new(1, -16, 0, 0)
+                        }):Play()
+                        task.delay(0.2, function()
+                            if not toggled then dropContainer.Visible = false end
+                        end)
+                    end
                 end
 
                 if callback then callback(toggled) end
             end
 
-            -- Set initial sizing if default is ON
-            if toggled and dropContainer then
-                card.Size = UDim2.new(1, -4, 0, baseHeight + dropExpandedHeight + 4)
-                dropContainer.Size = UDim2.new(1, -16, 0, dropExpandedHeight)
+            if dropContainer then
+                if toggled then
+                    dropContainer.Visible = true
+                    card.Size = UDim2.new(1, -4, 0, baseHeight + 36)
+                    dropContainer.Size = UDim2.new(1, -16, 0, 30)
+                else
+                    dropContainer.Visible = false
+                    dropContainer.Size = UDim2.new(1, -16, 0, 0)
+                end
             end
 
             clickBtn.MouseButton1Click:Connect(function()
