@@ -26,6 +26,7 @@ function Cheiz:AddWindow(config)
         IconId = (config and config.IconId) or 1000418434,
         DisplayOrder = (config and config.DisplayOrder) or 999999,
         DragThreshold = (config and config.DragThreshold) or 15,
+        SliderThreshold = 6,
         Transparent = (config and config.Transparent ~= nil) and config.Transparent or true,
         BackgroundTransparency = (config and config.BackgroundTransparency) or 0.35,
     }
@@ -508,7 +509,6 @@ function Cheiz:AddWindow(config)
     PopupBox.Position = UDim2.new(0.5, -130, 0.5, -60)
     PopupBox.BackgroundColor3 = Color3.fromRGB(16, 18, 26)
     PopupBox.BackgroundTransparency = elementAlpha
-    
     PopupBox.BorderSizePixel = 0
     PopupBox.ZIndex = 91
     PopupBox.Parent = PopupOverlay
@@ -868,18 +868,15 @@ function Cheiz:AddWindow(config)
 
         function TabAPI:AddDropdown(config)
             local titleText = config.Title or "Dropdown"
-            local descText = config.Desc or ""
             local options = config.Options or {}
-            local isMulti = config.Multi or false
-            local defaultVal = config.Default
+            local disableSearch = config.DisableSearch or false
+            local multi = config.Multi or false
+            local defaultOption = config.Default or (multi and {} or options[1])
             local callback = config.Callback
 
-            local hasDesc = descText ~= ""
-            local baseHeight = hasDesc and 52 or 42
-
             local card = Instance.new("Frame")
-            card.Name = "Card_Dropdown_" .. titleText
-            card.Size = UDim2.new(1, -4, 0, baseHeight)
+            card.Name = "Card_" .. titleText
+            card.Size = UDim2.new(1, -4, 0, 34)
             card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
             card.BackgroundTransparency = elementAlpha
             card.BorderSizePixel = 0
@@ -892,194 +889,263 @@ function Cheiz:AddWindow(config)
             stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
             stroke.Parent = card
 
+            local topHeader = Instance.new("Frame")
+            topHeader.Size = UDim2.new(1, 0, 0, 34)
+            topHeader.BackgroundTransparency = 1
+            topHeader.Parent = card
+
             local title = Instance.new("TextLabel")
-            title.Size = UDim2.new(1, -140, 0, 16)
-            title.Position = UDim2.fromOffset(10, hasDesc and 4 or 6)
+            title.Size = UDim2.new(1, -135, 1, 0)
+            title.Position = UDim2.fromOffset(10, 0)
             title.BackgroundTransparency = 1
             title.Text = titleText
             title.TextColor3 = Color3.fromRGB(255, 255, 255)
             title.TextSize = 13
-            title.Font = Enum.Font.GothamBold
+            title.Font = Enum.Font.GothamSemibold
             title.TextXAlignment = Enum.TextXAlignment.Left
-            title.Parent = card
+            title.Parent = topHeader
             applyTextGradient(title)
 
-            if hasDesc then
-                local desc = Instance.new("TextLabel")
-                desc.Size = UDim2.new(1, -140, 0, 14)
-                desc.Position = UDim2.fromOffset(10, 20)
-                desc.BackgroundTransparency = 1
-                desc.Text = descText
-                desc.TextColor3 = Color3.fromRGB(130, 140, 160)
-                desc.TextSize = 10
-                desc.Font = Enum.Font.GothamBold
-                desc.TextXAlignment = Enum.TextXAlignment.Left
-                desc.Parent = card
+            local triggerBtn = Instance.new("Frame")
+            triggerBtn.Size = UDim2.fromOffset(120, 22)
+            triggerBtn.Position = UDim2.new(1, -130, 0.5, -11)
+            triggerBtn.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+            triggerBtn.BackgroundTransparency = elementAlpha
+            triggerBtn.Parent = topHeader
+
+            local focusLine = Instance.new("Frame")
+            focusLine.Size = UDim2.new(1, 0, 0, 2)
+            focusLine.Position = UDim2.new(0, 0, 1, -2)
+            focusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+            focusLine.BackgroundTransparency = elementAlpha
+            focusLine.BorderSizePixel = 0
+            focusLine.Parent = triggerBtn
+
+            local triggerStroke = Instance.new("UIStroke")
+            triggerStroke.Color = Color3.fromRGB(0, 0, 0)
+            triggerStroke.Thickness = 1.5
+            triggerStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            triggerStroke.Parent = triggerBtn
+
+            local labelText = Instance.new("TextLabel")
+            labelText.Size = UDim2.new(1, -20, 1, 0)
+            labelText.Position = UDim2.fromOffset(6, 0)
+            labelText.BackgroundTransparency = 1
+            labelText.Text = type(defaultOption) == "table" and table.concat(defaultOption, ", ") or tostring(defaultOption)
+            labelText.TextColor3 = Color3.fromRGB(255, 255, 255)
+            labelText.TextSize = 11
+            labelText.Font = Enum.Font.GothamSemibold
+            labelText.TextXAlignment = Enum.TextXAlignment.Left
+            labelText.Parent = triggerBtn
+            applyTextGradient(labelText)
+
+            local arrowText = Instance.new("TextLabel")
+            arrowText.Size = UDim2.new(0, 16, 1, 0)
+            arrowText.Position = UDim2.new(1, -18, 0, 0)
+            arrowText.BackgroundTransparency = 1
+            arrowText.Text = "v"
+            arrowText.TextColor3 = Color3.fromRGB(20, 110, 240)
+            arrowText.TextSize = 12
+            arrowText.Font = Enum.Font.GothamSemibold
+            arrowText.Parent = triggerBtn
+
+            local clickArea = Instance.new("TextButton")
+            clickArea.Size = UDim2.fromScale(1, 1)
+            clickArea.BackgroundTransparency = 1
+            clickArea.Text = ""
+            clickArea.Parent = triggerBtn
+
+            local expandedContent = Instance.new("Frame")
+            expandedContent.Size = UDim2.new(1, -16, 0, 0)
+            expandedContent.Position = UDim2.fromOffset(8, 36)
+            expandedContent.BackgroundTransparency = 1
+            expandedContent.Parent = card
+
+            local searchBox = nil
+            local searchHeight = 0
+            if not disableSearch then
+                searchHeight = 26
+                searchBox = Instance.new("TextBox")
+                searchBox.Size = UDim2.new(1, 0, 0, 24)
+                searchBox.Position = UDim2.fromOffset(0, 0)
+                searchBox.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+                searchBox.BackgroundTransparency = elementAlpha
+                searchBox.Text = ""
+                searchBox.PlaceholderText = "Search options..."
+                searchBox.PlaceholderColor3 = Color3.fromRGB(110, 120, 140)
+                searchBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+                searchBox.TextSize = 11
+                searchBox.Font = Enum.Font.GothamSemibold
+                searchBox.Parent = expandedContent
+
+                local searchFocusLine = Instance.new("Frame")
+                searchFocusLine.Size = UDim2.new(1, 0, 0, 2)
+                searchFocusLine.Position = UDim2.new(0, 0, 1, -2)
+                searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+                searchFocusLine.BackgroundTransparency = elementAlpha
+                searchFocusLine.BorderSizePixel = 0
+                searchFocusLine.Parent = searchBox
+
+                searchBox.Focused:Connect(function()
+                    searchFocusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+                end)
+                searchBox.FocusLost:Connect(function()
+                    searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+                end)
+
+                local searchStroke = Instance.new("UIStroke")
+                searchStroke.Color = Color3.fromRGB(0, 0, 0)
+                searchStroke.Thickness = 1.5
+                searchStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                searchStroke.Parent = searchBox
             end
 
-            local dropdownBtn = Instance.new("TextButton")
-            dropdownBtn.Size = UDim2.new(0, 130, 0, 26)
-            dropdownBtn.Position = UDim2.new(1, -138, 0.5, -13)
-            dropdownBtn.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
-            dropdownBtn.BackgroundTransparency = elementAlpha
-            dropdownBtn.BorderSizePixel = 0
-            dropdownBtn.Text = ""
-            dropdownBtn.Parent = card
+            local gridContainer = Instance.new("ScrollingFrame")
+            gridContainer.Size = UDim2.new(1, 0, 1, -searchHeight)
+            gridContainer.Position = UDim2.fromOffset(0, searchHeight + (searchHeight > 0 and 4 or 0))
+            gridContainer.BackgroundTransparency = 1
+            gridContainer.BorderSizePixel = 0
+            gridContainer.CanvasSize = UDim2.fromScale(0, 0)
+            gridContainer.ScrollBarThickness = 2
+            gridContainer.Parent = expandedContent
 
-            local btnStroke = Instance.new("UIStroke")
-            btnStroke.Color = Color3.fromRGB(0, 0, 0)
-            btnStroke.Thickness = 1.5
-            btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-            btnStroke.Parent = dropdownBtn
+            local gridLayout = Instance.new("UIGridLayout")
+            gridLayout.CellSize = UDim2.fromOffset(128, 24)
+            gridLayout.CellPadding = UDim2.fromOffset(4, 4)
+            gridLayout.SortOrder = Enum.SortOrder.LayoutOrder
+            gridLayout.Parent = gridContainer
 
-            local btnLabel = Instance.new("TextLabel")
-            btnLabel.Size = UDim2.new(1, -20, 1, 0)
-            btnLabel.Position = UDim2.fromOffset(8, 0)
-            btnLabel.BackgroundTransparency = 1
-            btnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-            btnLabel.TextSize = 11
-            btnLabel.Font = Enum.Font.GothamBold
-            btnLabel.TextXAlignment = Enum.TextXAlignment.Left
-            btnLabel.Parent = dropdownBtn
-
-            local arrow = Instance.new("TextLabel")
-            arrow.Size = UDim2.fromOffset(16, 16)
-            arrow.Position = UDim2.new(1, -18, 0.5, -8)
-            arrow.BackgroundTransparency = 1
-            arrow.Text = "v"
-            arrow.TextColor3 = Color3.fromRGB(180, 190, 210)
-            arrow.TextSize = 10
-            arrow.Font = Enum.Font.GothamBold
-            arrow.Parent = dropdownBtn
-
-            local listContainer = Instance.new("Frame")
-            listContainer.Name = "ListContainer"
-            listContainer.Size = UDim2.new(1, -16, 0, 0)
-            listContainer.Position = UDim2.fromOffset(8, baseHeight)
-            listContainer.BackgroundTransparency = 1
-            listContainer.Visible = false
-            listContainer.Parent = card
-
-            local listLayout = Instance.new("UIListLayout")
-            listLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            listLayout.Padding = UDim.new(0, 4)
-            listLayout.Parent = listContainer
+            gridLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+                gridContainer.CanvasSize = UDim2.fromOffset(0, gridLayout.AbsoluteContentSize.Y + 4)
+            end)
 
             local selectedValues = {}
-            if isMulti then
-                if type(defaultVal) == "table" then
-                    for _, v in ipairs(defaultVal) do selectedValues[v] = true end
+            if multi then
+                if type(defaultOption) == "table" then
+                    for _, v in ipairs(defaultOption) do selectedValues[v] = true end
+                elseif defaultOption then
+                    selectedValues[defaultOption] = true
                 end
             else
-                selectedValues = defaultVal or options[1]
+                selectedValues[defaultOption] = true
             end
 
-            local function getDisplayText()
-                if isMulti then
-                    local t = {}
-                    for _, opt in ipairs(options) do
-                        if selectedValues[opt] then table.insert(t, opt) end
-                    end
-                    if #t == 0 then return "Select..." end
-                    return table.concat(t, ", ")
-                else
-                    return tostring(selectedValues or "Select...")
+            local function isSelected(opt) return selectedValues[opt] == true end
+
+            local renderOptions
+            local expanded = false
+
+            local function setExpandState(state)
+                expanded = state
+                local totalContentHeight = expandedContent.AbsoluteSize.Y
+                local targetHeight = expanded and (40 + totalContentHeight) or 34
+                TweenService:Create(card, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(1, -4, 0, targetHeight)
+                }):Play()
+                arrowText.Text = expanded and "^" or "v"
+            end
+
+            renderOptions = function(filterText)
+                for _, child in ipairs(gridContainer:GetChildren()) do
+                    if child:IsA("TextButton") then child:Destroy() end
                 end
+
+                local filteredCount = 0
+                for _, opt in ipairs(options) do
+                    if filterText == "" or opt:lower():find(filterText:lower()) then
+                        filteredCount = filteredCount + 1
+                        
+                        local optBtn = Instance.new("TextButton")
+                        optBtn.Size = UDim2.fromOffset(128, 24)
+                        optBtn.BackgroundColor3 = Color3.fromRGB(12, 16, 24)
+                        optBtn.BackgroundTransparency = elementAlpha
+                        optBtn.Text = ""
+                        optBtn.Parent = gridContainer
+
+                        local optStroke = Instance.new("UIStroke")
+                        optStroke.Color = Color3.fromRGB(0, 0, 0)
+                        optStroke.Thickness = 1
+                        optStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                        optStroke.Parent = optBtn
+
+                        local selected = isSelected(opt)
+
+                        local selectionBox = Instance.new("Frame")
+                        selectionBox.Size = UDim2.fromOffset(12, 12)
+                        selectionBox.Position = UDim2.new(0, 5, 0.5, -6)
+                        selectionBox.BackgroundColor3 = selected and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(14, 16, 22)
+                        selectionBox.BackgroundTransparency = elementAlpha
+                        selectionBox.BorderSizePixel = 0
+                        selectionBox.Parent = optBtn
+
+                        local boxStroke = Instance.new("UIStroke")
+                        boxStroke.Color = Color3.fromRGB(0, 0, 0)
+                        boxStroke.Thickness = 1.5
+                        boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                        boxStroke.Parent = selectionBox
+
+                        local optLabel = Instance.new("TextLabel")
+                        optLabel.Size = UDim2.new(1, -22, 1, 0)
+                        optLabel.Position = UDim2.fromOffset(20, 0)
+                        optLabel.BackgroundTransparency = 1
+                        optLabel.Text = opt
+                        optLabel.TextColor3 = selected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 180, 180)
+                        optLabel.TextSize = 10
+                        optLabel.Font = Enum.Font.GothamSemibold
+                        optLabel.TextXAlignment = Enum.TextXAlignment.Left
+                        optLabel.Parent = optBtn
+
+                        optBtn.MouseButton1Click:Connect(function()
+                            if multi then
+                                selectedValues[opt] = not selectedValues[opt]
+                                local list = {}
+                                for k, v in pairs(selectedValues) do
+                                    if v then table.insert(list, k) end
+                                end
+                                labelText.Text = (#list > 0) and table.concat(list, ", ") or "None"
+                                renderOptions(searchBox and searchBox.Text or "")
+                                if callback then callback(list) end
+                            else
+                                selectedValues = {[opt] = true}
+                                labelText.Text = opt
+                                renderOptions(searchBox and searchBox.Text or "")
+                                setExpandState(false)
+                                if callback then callback(opt) end
+                            end
+                        end)
+                    end
+                end
+
+                local rows = math.ceil(filteredCount / 3)
+                local gridHeight = math.max(rows * 28, 28)
+                expandedContent.Size = UDim2.new(1, -16, 0, searchHeight + (searchHeight > 0 and 4 or 0) + gridHeight)
             end
 
-            btnLabel.Text = getDisplayText()
+            renderOptions("")
 
-            for _, opt in ipairs(options) do
-                local optBtn = Instance.new("TextButton")
-                optBtn.Size = UDim2.new(1, 0, 0, 24)
-                local isSelected = isMulti and selectedValues[opt] or (selectedValues == opt)
-                optBtn.BackgroundColor3 = isSelected and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
-                optBtn.BackgroundTransparency = elementAlpha
-                optBtn.Text = "  " .. opt
-                optBtn.TextColor3 = isSelected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
-                optBtn.TextSize = 11
-                optBtn.Font = Enum.Font.GothamBold
-                optBtn.TextXAlignment = Enum.TextXAlignment.Left
-                optBtn.Parent = listContainer
-
-                local optStroke = Instance.new("UIStroke")
-                optStroke.Color = Color3.fromRGB(0, 0, 0)
-                optStroke.Thickness = 1
-                optStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                optStroke.Parent = optBtn
-
-                optBtn.MouseButton1Click:Connect(function()
-                    if isMulti then
-                        selectedValues[opt] = not selectedValues[opt]
-                        optBtn.BackgroundColor3 = selectedValues[opt] and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
-                        optBtn.TextColor3 = selectedValues[opt] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
-                        btnLabel.Text = getDisplayText()
-                        if callback then callback(selectedValues) end
-                    else
-                        selectedValues = opt
-                        for _, child in ipairs(listContainer:GetChildren()) do
-                            if child:IsA("TextButton") then
-                                local match = (child.Text:gsub("^%s*", "") == selectedValues)
-                                child.BackgroundColor3 = match and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
-                                child.TextColor3 = match and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
-                            end
-                        end
-                        btnLabel.Text = getDisplayText()
-                        
-                        isOpen = false
-                        arrow.Text = "v"
-                        TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                            Size = UDim2.new(1, -4, 0, baseHeight)
-                        }):Play()
-                        local tw = TweenService:Create(listContainer, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                            Size = UDim2.new(1, -16, 0, 0)
-                        })
-                        tw:Play()
-                        tw.Completed:Connect(function()
-                            if not isOpen then listContainer.Visible = false end
-                        end)
-
-                        if callback then callback(selectedValues) end
-                    end
+            if searchBox then
+                searchBox:GetPropertyChangedSignal("Text"):Connect(function()
+                    renderOptions(searchBox.Text)
                 end)
             end
 
-            local isOpen = false
-            dropdownBtn.MouseButton1Click:Connect(function()
-                isOpen = not isOpen
-                arrow.Text = isOpen and "^" or "v"
-
-                if isOpen then
-                    listContainer.Visible = true
-                    local contentH = (#options * 28) + 8
-                    local totalH = baseHeight + contentH
-                    TweenService:Create(card, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(1, -4, 0, totalH)
-                    }):Play()
-                    TweenService:Create(listContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(1, -16, 0, contentH)
-                    }):Play()
-                else
-                    TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                        Size = UDim2.new(1, -4, 0, baseHeight)
-                    }):Play()
-                    local tw = TweenService:Create(listContainer, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                        Size = UDim2.new(1, -16, 0, 0)
-                    })
-                    tw:Play()
-                    tw.Completed:Connect(function()
-                        if not isOpen then listContainer.Visible = false end
-                    end)
-                end
+            clickArea.MouseButton1Click:Connect(function()
+                setExpandState(not expanded)
             end)
 
             return card
         end
 
         function TabAPI:AddSlider(config)
+            local titleText = config.Title or "Slider"
+            local minVal = config.Min or 0
+            local maxVal = config.Max or 100
+            local defaultVal = config.Default or 50
+            local callback = config.Callback
+
             local card = Instance.new("Frame")
-            card.Name = "Card_Slider"
-            card.Size = UDim2.new(1, -4, 0, config.Desc and 46 or 40)
+            card.Name = "Card_" .. titleText
+            card.Size = UDim2.new(1, -4, 0, 34)
             card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
             card.BackgroundTransparency = elementAlpha
             card.BorderSizePixel = 0
@@ -1092,81 +1158,152 @@ function Cheiz:AddWindow(config)
             stroke.Parent = card
 
             local title = Instance.new("TextLabel")
-            title.Size = UDim2.new(1, -60, 0, 16)
-            title.Position = UDim2.fromOffset(10, config.Desc and 4 or 5)
+            title.Size = UDim2.new(1, -180, 1, 0)
+            title.Position = UDim2.fromOffset(10, 0)
             title.BackgroundTransparency = 1
-            title.Text = config.Title or "Slider"
+            title.Text = titleText
             title.TextColor3 = Color3.fromRGB(255, 255, 255)
             title.TextSize = 13
-            title.Font = Enum.Font.GothamBold
+            title.Font = Enum.Font.GothamSemibold
             title.TextXAlignment = Enum.TextXAlignment.Left
             title.Parent = card
             applyTextGradient(title)
 
-            local valLabel = Instance.new("TextLabel")
-            valLabel.Size = UDim2.new(0, 50, 0, 16)
-            valLabel.Position = UDim2.new(1, -55, 0, config.Desc and 4 or 5)
-            valLabel.BackgroundTransparency = 1
-            valLabel.Text = tostring(config.Default or 50)
-            valLabel.TextColor3 = Color3.fromRGB(180, 190, 210)
-            valLabel.TextSize = 12
-            valLabel.Font = Enum.Font.GothamBold
-            valLabel.TextXAlignment = Enum.TextXAlignment.Right
-            valLabel.Parent = card
+            local valBox = Instance.new("TextBox")
+            valBox.Size = UDim2.fromOffset(48, 20)
+            valBox.Position = UDim2.new(1, -170, 0.5, -10)
+            valBox.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
+            valBox.BackgroundTransparency = elementAlpha
+            valBox.Text = tostring(defaultVal)
+            valBox.TextColor3 = Color3.fromRGB(255, 255, 255)
+            valBox.TextSize = 11
+            valBox.Font = Enum.Font.GothamSemibold
+            valBox.Parent = card
+
+            local valBoxFocusLine = Instance.new("Frame")
+            valBoxFocusLine.Size = UDim2.new(1, 0, 0, 2)
+            valBoxFocusLine.Position = UDim2.new(0, 0, 1, -2)
+            valBoxFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+            valBoxFocusLine.BackgroundTransparency = elementAlpha
+            valBoxFocusLine.BorderSizePixel = 0
+            valBoxFocusLine.Parent = valBox
+
+            valBox.Focused:Connect(function()
+                valBoxFocusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            end)
+            valBox.FocusLost:Connect(function()
+                valBoxFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+            end)
+
+            local boxStroke = Instance.new("UIStroke")
+            boxStroke.Color = Color3.fromRGB(0, 0, 0)
+            boxStroke.Thickness = 1.5
+            boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            boxStroke.Parent = valBox
 
             local sliderBar = Instance.new("Frame")
-            sliderBar.Size = UDim2.new(1, -20, 0, 4)
-            sliderBar.Position = UDim2.new(0, 10, 0, config.Desc and 37 or 29)
-            sliderBar.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
+            sliderBar.Size = UDim2.new(0, 110, 0, 8)
+            sliderBar.Position = UDim2.new(1, -114, 0.5, -4)
+            sliderBar.BackgroundColor3 = Color3.fromRGB(10, 12, 18)
             sliderBar.BackgroundTransparency = elementAlpha
             sliderBar.BorderSizePixel = 0
             sliderBar.Parent = card
 
-            local initP = math.clamp(((config.Default or 50) - (config.Min or 0)) / ((config.Max or 100) - (config.Min or 0)), 0, 1)
-            local sliderFill = Instance.new("Frame")
-            sliderFill.Size = UDim2.new(initP, 0, 1, 0)
-            sliderFill.BackgroundColor3 = Color3.fromRGB(25, 120, 240)
-            sliderFill.BackgroundTransparency = elementAlpha
-            sliderFill.BorderSizePixel = 0
-            sliderFill.Parent = sliderBar
+            local barStroke = Instance.new("UIStroke")
+            barStroke.Color = Color3.fromRGB(0, 0, 0)
+            barStroke.Thickness = 1.5
+            barStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            barStroke.Parent = sliderBar
+
+            local fill = Instance.new("Frame")
+            fill.Size = UDim2.new((defaultVal - minVal) / (maxVal - minVal), 0, 1, 0)
+            fill.BackgroundColor3 = Color3.fromRGB(25, 120, 240)
+            fill.BackgroundTransparency = elementAlpha
+            fill.BorderSizePixel = 0
+            fill.Parent = sliderBar
+
+            local handle = Instance.new("Frame")
+            handle.Size = UDim2.fromOffset(6, 14)
+            handle.Position = UDim2.new(1, -3, 0.5, -7)
+            handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+            handle.BackgroundTransparency = elementAlpha
+            handle.BorderSizePixel = 0
+            handle.Parent = fill
+
+            local handleStroke = Instance.new("UIStroke")
+            handleStroke.Color = Color3.fromRGB(0, 0, 0)
+            handleStroke.Thickness = 1.5
+            handleStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            handleStroke.Parent = handle
 
             local sliderBtn = Instance.new("TextButton")
-            sliderBtn.Size = UDim2.new(1, 10, 1, 10)
-            sliderBtn.Position = UDim2.fromOffset(-5, -5)
+            sliderBtn.Size = UDim2.fromScale(1, 1)
             sliderBtn.BackgroundTransparency = 1
             sliderBtn.Text = ""
             sliderBtn.Parent = sliderBar
 
-            local minVal = config.Min or 0
-            local maxVal = config.Max or 100
-            local step = config.Step or 1
-            local currentValue = config.Default or 50
+            local currentValue = defaultVal
+            local activeInput = nil
+            local touchStartPos = nil
             local dragging = false
 
+            local function updateValue(val)
+                currentValue = math.clamp(math.floor(val), minVal, maxVal)
+                local pos = (currentValue - minVal) / (maxVal - minVal)
+                fill.Size = UDim2.new(pos, 0, 1, 0)
+                valBox.Text = tostring(currentValue)
+                if callback then callback(currentValue) end
+            end
+
+            local function updateFromInput(inputPos)
+                local barPos = sliderBar.AbsolutePosition.X
+                local barSize = sliderBar.AbsoluteSize.X
+                local pos = math.clamp((inputPos - barPos) / barSize, 0, 1)
+                updateValue(minVal + ((maxVal - minVal) * pos))
+            end
+
+            valBox.FocusLost:Connect(function()
+                local num = tonumber(valBox.Text)
+                if num then
+                    updateValue(num)
+                else
+                    valBox.Text = tostring(currentValue)
+                end
+            end)
+
             sliderBtn.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    dragging = true
+                if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and activeInput == nil then
+                    activeInput = input
+                    touchStartPos = input.Position
+                    dragging = false
+                    updateFromInput(input.Position.X)
                 end
             end)
 
             UserInputService.InputEnded:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                if input == activeInput then
+                    activeInput = nil
                     dragging = false
+                    if scrollPage and scrollPage:IsA("ScrollingFrame") then
+                        scrollPage.ScrollingEnabled = true
+                    end
                 end
             end)
 
             UserInputService.InputChanged:Connect(function(input)
-                if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                    local barPos = sliderBar.AbsolutePosition.X
-                    local barSize = sliderBar.AbsoluteSize.X
-                    local pos = math.clamp((input.Position.X - barPos) / barSize, 0, 1)
-                    local rawVal = minVal + ((maxVal - minVal) * pos)
-                    currentValue = step > 0 and math.round(rawVal / step) * step or rawVal
-                    currentValue = math.clamp(currentValue, minVal, maxVal)
-
-                    sliderFill.Size = UDim2.new((currentValue - minVal) / (maxVal - minVal), 0, 1, 0)
-                    valLabel.Text = tostring(currentValue)
-                    if config.Callback then config.Callback(currentValue) end
+                if input == activeInput and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    local delta = input.Position - touchStartPos
+                    if not dragging then
+                        if math.abs(delta.X) > windowConfig.SliderThreshold then
+                            dragging = true
+                            if scrollPage and scrollPage:IsA("ScrollingFrame") then
+                                scrollPage.ScrollingEnabled = false
+                            end
+                        end
+                    end
+                    if dragging then
+                        updateFromInput(input.Position.X)
+                    end
                 end
             end)
 
@@ -1218,7 +1355,7 @@ function Cheiz:AddWindow(config)
             focusLine.Size = UDim2.new(1, 0, 0, 2)
             focusLine.Position = UDim2.new(0, 0, 1, -2)
             focusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
-            focusLine.BackgroundTransparency = 1
+            focusLine.BackgroundTransparency = elementAlpha
             focusLine.BorderSizePixel = 0
             focusLine.Parent = textBoxBg
 
