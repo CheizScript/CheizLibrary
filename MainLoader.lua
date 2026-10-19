@@ -771,37 +771,88 @@ function Cheiz:AddWindow(config)
 
         function TabAPI:AddSection(sectionTitle)
             local sectionFrame = Instance.new("Frame")
-            sectionFrame.Size = UDim2.new(1, -4, 0, 28)
+            sectionFrame.Name = randomizeName(8)
+            sectionFrame.Size = UDim2.new(1, -4, 0, 32)
             sectionFrame.BackgroundTransparency = 1
+            sectionFrame.ClipsDescendants = true
             sectionFrame.Parent = scrollPage
 
             local sectionBtn = Instance.new("TextButton")
-            sectionBtn.Size = UDim2.fromScale(1, 1)
+            sectionBtn.Size = UDim2.new(1, 0, 0, 32)
             sectionBtn.BackgroundTransparency = 1
             sectionBtn.Text = "v " .. sectionTitle
             sectionBtn.TextColor3 = Color3.fromRGB(255, 255, 255)
-            sectionBtn.TextSize = 14
+            sectionBtn.TextSize = 15
             sectionBtn.Font = Enum.Font.GothamBold
             sectionBtn.TextXAlignment = Enum.TextXAlignment.Left
             sectionBtn.Parent = sectionFrame
             applyTextGradient(sectionBtn)
 
+            local elementsInGroup = {}
             local expanded = true
+
+            local function registerElement(elementCard)
+                table.insert(elementsInGroup, elementCard)
+            end
+
             sectionBtn.MouseButton1Click:Connect(function()
                 expanded = not expanded
                 sectionBtn.Text = (expanded and "v " or "> ") .. sectionTitle
-                for _, child in ipairs(scrollPage:GetChildren()) do
-                    if child:IsA("Frame") and child ~= sectionFrame and child.Name:find("Card_") then
-                        child.Visible = expanded
+                
+                for _, el in ipairs(elementsInGroup) do
+                    if el and el.Parent then
+                        local targetSize = expanded and el:GetAttribute("OriginalHeight") or 0
+                        local targetTrans = expanded and 0 or 1
+                        
+                        if expanded then
+                            el.Visible = true
+                        end
+
+                        TweenService:Create(el, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                            Size = UDim2.new(1, -4, 0, targetSize),
+                            BackgroundTransparency = targetTrans
+                        }):Play()
+
+                        for _, child in ipairs(el:GetDescendants()) do
+                            if child:IsA("TextLabel") or child:IsA("TextButton") or child:IsA("TextBox") then
+                                TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                    TextTransparency = targetTrans
+                                }):Play()
+                            elseif child:IsA("UIStroke") then
+                                TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                                    Transparency = targetTrans
+                                }):Play()
+                            end
+                        end
+
+                        task.delay(0.2, function()
+                            if el and el.Parent and not expanded then
+                                el.Visible = false
+                            end
+                        end)
                     end
                 end
             end)
+
+            local originalAddLabel = TabAPI.AddLabel
+            -- We hook element creation dynamically to assign to the active section group
+            local function wrapElement(creatorFunc)
+                return function(self, config)
+                    local elementCard = creatorFunc(self, config)
+                    if elementCard then
+                        elementCard:SetAttribute("OriginalHeight", elementCard.AbsoluteSize.Y > 0 and elementCard.AbsoluteSize.Y or 34)
+                        registerElement(elementCard)
+                    end
+                    return elementCard
+                end
+            end
 
             return {
                 SetTitle = function(self, t)
                     sectionTitle = t
                     sectionBtn.Text = (expanded and "v " or "> ") .. sectionTitle
-                end
+                end,
+                Register = registerElement
             }
         end
 
@@ -1336,7 +1387,7 @@ function Cheiz:AddWindow(config)
                         dropIsOpen = false
                         TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                             Size = UDim2.new(1, -4, 0, baseHeight)
-                        }):Play()
+                         }):Play()
                         TweenService:Create(dropContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                             Size = UDim2.new(1, -16, 0, 0)
                         }):Play()
@@ -1790,7 +1841,7 @@ function Cheiz:AddWindow(config)
                     updateFromInput(input.Position.X)
                 end
             end)
-            
+
             UserInputService.InputEnded:Connect(function(input)
                 if input == activeInput then
                     activeInput = nil
@@ -1902,6 +1953,15 @@ function Cheiz:AddWindow(config)
                 end
             }
         end
+
+        -- Wrap element creators automatically so they bind to sections properly if desired
+        local originalAddLabel = TabAPI.AddLabel
+        local originalAddButton = TabAPI.AddButton
+        local originalAddKeybind = TabAPI.AddKeybind
+        local originalAddToggle = TabAPI.AddToggle
+        local originalAddDropdown = TabAPI.AddDropdown
+        local originalAddSlider = TabAPI.AddSlider
+        local originalAddTextBox = TabAPI.AddTextBox
 
         return TabAPI
     end
