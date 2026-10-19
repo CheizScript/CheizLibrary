@@ -18,7 +18,7 @@ end
 
 local Cheiz = {}
 Cheiz.WindowConfig = {
-    Title = "CHEIZ LIBRARY",
+    Title = "CHEIZ HUB",
     FloatingButton = true,
     IconSize = UDim2.fromOffset(45, 45),
     IconId = 1000418434,
@@ -856,7 +856,8 @@ function Cheiz:CreateTab(tabName)
                         child.Size = UDim2.new(1, -4, 0, 0)
                         local targetH = 34
                         if child.Name:find("Toggle") then targetH = 44 end
-                        if child.Name:find("Slider") then targetH = 50 end
+                        if child.Name:find("Slider") then targetH = 46 end
+                        if child.Name:find("Dropdown") then targetH = 42 end
                         if child.Name:find("TextBox") then targetH = (child.AbsoluteSize.Y > 40 and 52 or 42) end
                         TweenService:Create(child, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                             Size = UDim2.new(1, -4, 0, targetH)
@@ -994,13 +995,11 @@ function Cheiz:CreateTab(tabName)
         local descText = config.Desc or ""
         local defaultState = config.Default or false
         local callback = config.Callback
-        local dropdownConfig = config.Dropdown
         local keybindConfig = config.Keybind
 
         local hasDesc = descText ~= ""
-        local hasDropdown = dropdownConfig and dropdownConfig.Options ~= nil
         local baseHeight = hasDesc and 44 or 34
-
+        
         local card = Instance.new("Frame")
         card.Name = "Card_Toggle_" .. titleText
         card.Size = UDim2.new(1, -4, 0, baseHeight)
@@ -1092,49 +1091,6 @@ function Cheiz:CreateTab(tabName)
         clickBtn.Text = ""
         clickBtn.Parent = card
 
-        local dropdownFrame = nil
-        local dropdownListLayout = nil
-        if hasDropdown then
-            dropdownFrame = Instance.new("Frame")
-            dropdownFrame.Name = "DropdownContainer"
-            dropdownFrame.Size = UDim2.new(1, -16, 0, 0)
-            dropdownFrame.Position = UDim2.fromOffset(8, baseHeight)
-            dropdownFrame.BackgroundColor3 = Color3.fromRGB(14, 16, 24)
-            dropdownFrame.BackgroundTransparency = 1
-            dropdownFrame.Visible = false
-            dropdownFrame.Parent = card
-
-            dropdownListLayout = Instance.new("UIListLayout")
-            dropdownListLayout.SortOrder = Enum.SortOrder.LayoutOrder
-            dropdownListLayout.Padding = UDim.new(0, 4)
-            dropdownListLayout.Parent = dropdownFrame
-
-            for _, optText in ipairs(dropdownConfig.Options) do
-                local optBtn = Instance.new("TextButton")
-                optBtn.Size = UDim2.new(1, 0, 0, 24)
-                optBtn.BackgroundColor3 = Color3.fromRGB(22, 26, 36)
-                optBtn.BackgroundTransparency = Cheiz.WindowConfig.Transparent and Cheiz.WindowConfig.BackgroundTransparency or 0
-                optBtn.Text = "  " .. optText
-                optBtn.TextColor3 = Color3.fromRGB(180, 190, 210)
-                optBtn.TextSize = 11
-                optBtn.Font = Enum.Font.GothamBold
-                optBtn.TextXAlignment = Enum.TextXAlignment.Left
-                optBtn.Parent = dropdownFrame
-
-                local optStroke = Instance.new("UIStroke")
-                optStroke.Color = Color3.fromRGB(0, 0, 0)
-                optStroke.Thickness = 1
-                optStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                optStroke.Parent = optBtn
-
-                optBtn.MouseButton1Click:Connect(function()
-                    if dropdownConfig.Callback then
-                        dropdownConfig.Callback(optText)
-                    end
-                end)
-            end
-        end
-
         local toggled = defaultState
 
         local function updateState(newState)
@@ -1143,33 +1099,6 @@ function Cheiz:CreateTab(tabName)
             toggleBox.BackgroundColor3 = toggled and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(30, 35, 48)
             toggleBox.BackgroundTransparency = alphaVal
             knob.Position = toggled and UDim2.new(1, -16, 0.5, -7) or UDim2.new(0, 2, 0.5, -7)
-            
-            if hasDropdown then
-                if toggled then
-                    dropdownFrame.Visible = true
-                    local contentH = (#dropdownConfig.Options * 28) + 8
-                    local totalH = baseHeight + contentH
-                    TweenService:Create(card, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(1, -4, 0, totalH)
-                    }):Play()
-                    TweenService:Create(dropdownFrame, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
-                        Size = UDim2.new(1, -16, 0, contentH),
-                        BackgroundTransparency = alphaVal
-                    }):Play()
-                else
-                    TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                        Size = UDim2.new(1, -4, 0, baseHeight)
-                    }):Play()
-                    local tw = TweenService:Create(dropdownFrame, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
-                        Size = UDim2.new(1, -16, 0, 0),
-                        BackgroundTransparency = 1
-                    })
-                    tw:Play()
-                    tw.Completed:Connect(function()
-                        if not toggled then dropdownFrame.Visible = false end
-                    end)
-                end
-            end
 
             if callback then callback(toggled) end
         end
@@ -1215,6 +1144,225 @@ function Cheiz:CreateTab(tabName)
         }
     end
 
+    function TabAPI:AddDropdown(config)
+        local titleText = config.Title or "Dropdown"
+        local descText = config.Desc or ""
+        local options = config.Options or {}
+        local isMulti = config.Multi or false
+        local defaultVal = config.Default
+        local callback = config.Callback
+
+        local hasDesc = descText ~= ""
+        local baseHeight = hasDesc and 52 or 42
+
+        local card = Instance.new("Frame")
+        card.Name = "Card_Dropdown_" .. titleText
+        card.Size = UDim2.new(1, -4, 0, baseHeight)
+        card.BackgroundColor3 = Color3.fromRGB(18, 22, 32)
+        card.BackgroundTransparency = Cheiz.WindowConfig.Transparent and Cheiz.WindowConfig.BackgroundTransparency or 0
+        card.BorderSizePixel = 0
+        card.ClipsDescendants = true
+        card.Parent = scrollPage
+
+        local stroke = Instance.new("UIStroke")
+        stroke.Color = Color3.fromRGB(0, 0, 0)
+        stroke.Thickness = 1.5
+        stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        stroke.Parent = card
+
+        local title = Instance.new("TextLabel")
+        title.Size = UDim2.new(1, -140, 0, 16)
+        title.Position = UDim2.fromOffset(10, hasDesc and 4 or 6)
+        title.BackgroundTransparency = 1
+        title.Text = titleText
+        title.TextColor3 = Color3.fromRGB(255, 255, 255)
+        title.TextSize = 13
+        title.Font = Enum.Font.GothamBold
+        title.TextXAlignment = Enum.TextXAlignment.Left
+        title.Parent = card
+        applyTextGradient(title)
+
+        if hasDesc then
+            local desc = Instance.new("TextLabel")
+            desc.Size = UDim2.new(1, -140, 0, 14)
+            desc.Position = UDim2.fromOffset(10, 20)
+            desc.BackgroundTransparency = 1
+            desc.Text = descText
+            desc.TextColor3 = Color3.fromRGB(130, 140, 160)
+            desc.TextSize = 10
+            desc.Font = Enum.Font.GothamBold
+            desc.TextXAlignment = Enum.TextXAlignment.Left
+            desc.Parent = card
+        end
+
+        local dropdownBtn = Instance.new("TextButton")
+        dropdownBtn.Size = UDim2.new(0, 130, 0, 26)
+        dropdownBtn.Position = UDim2.new(1, -138, 0.5, -13)
+        dropdownBtn.BackgroundColor3 = Color3.fromRGB(25, 30, 42)
+        dropdownBtn.BackgroundTransparency = Cheiz.WindowConfig.Transparent and Cheiz.WindowConfig.BackgroundTransparency or 0
+        dropdownBtn.BorderSizePixel = 0
+        dropdownBtn.Text = ""
+        dropdownBtn.Parent = card
+
+        local btnStroke = Instance.new("UIStroke")
+        btnStroke.Color = Color3.fromRGB(0, 0, 0)
+        btnStroke.Thickness = 1.5
+        btnStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+        btnStroke.Parent = dropdownBtn
+
+        local btnLabel = Instance.new("TextLabel")
+        btnLabel.Size = UDim2.new(1, -20, 1, 0)
+        btnLabel.Position = UDim2.fromOffset(8, 0)
+        btnLabel.BackgroundTransparency = 1
+        btnLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+        btnLabel.TextSize = 11
+        btnLabel.Font = Enum.Font.GothamBold
+        btnLabel.TextXAlignment = Enum.TextXAlignment.Left
+        btnLabel.Parent = dropdownBtn
+
+        local arrow = Instance.new("TextLabel")
+        arrow.Size = UDim2.fromOffset(16, 16)
+        arrow.Position = UDim2.new(1, -18, 0.5, -8)
+        arrow.BackgroundTransparency = 1
+        arrow.Text = "v"
+        arrow.TextColor3 = Color3.fromRGB(180, 190, 210)
+        arrow.TextSize = 10
+        arrow.Font = Enum.Font.GothamBold
+        arrow.Parent = dropdownBtn
+
+        local listContainer = Instance.new("Frame")
+        listContainer.Name = "ListContainer"
+        listContainer.Size = UDim2.new(1, -16, 0, 0)
+        listContainer.Position = UDim2.fromOffset(8, baseHeight)
+        listContainer.BackgroundTransparency = 1
+        listContainer.Visible = false
+        listContainer.Parent = card
+
+        local listLayout = Instance.new("UIListLayout")
+        listLayout.SortOrder = Enum.SortOrder.LayoutOrder
+        listLayout.Padding = UDim.new(0, 4)
+        listLayout.Parent = listContainer
+
+        local selectedValues = {}
+        if isMulti then
+            if type(defaultVal) == "table" then
+                for _, v in ipairs(defaultVal) do selectedValues[v] = true end
+            end
+        else
+            selectedValues = defaultVal or options[1]
+        end
+
+        local function getDisplayText()
+            if isMulti then
+                local t = {}
+                for _, opt in ipairs(options) do
+                    if selectedValues[opt] then table.insert(t, opt) end
+                end
+                if #t == 0 then return "Select..." end
+                return table.concat(t, ", ")
+            else
+                return tostring(selectedValues or "Select...")
+            end
+        end
+
+        btnLabel.Text = getDisplayText()
+
+        local optionButtons = {}
+
+        for _, opt in ipairs(options) do
+            local optBtn = Instance.new("TextButton")
+            optBtn.Size = UDim2.new(1, 0, 0, 24)
+            local isSelected = isMulti and selectedValues[opt] or (selectedValues == opt)
+            optBtn.BackgroundColor3 = isSelected and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
+            optBtn.BackgroundTransparency = Cheiz.WindowConfig.Transparent and Cheiz.WindowConfig.BackgroundTransparency or 0
+            optBtn.Text = "  " .. opt
+            optBtn.TextColor3 = isSelected and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
+            optBtn.TextSize = 11
+            optBtn.Font = Enum.Font.GothamBold
+            optBtn.TextXAlignment = Enum.TextXAlignment.Left
+            optBtn.Parent = listContainer
+
+            local optStroke = Instance.new("UIStroke")
+            optStroke.Color = Color3.fromRGB(0, 0, 0)
+            optStroke.Thickness = 1
+            optStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            optStroke.Parent = optBtn
+
+            optionButtons[opt] = optBtn
+
+            optBtn.MouseButton1Click:Connect(function()
+                if isMulti then
+                    selectedValues[opt] = not selectedValues[opt]
+                    optBtn.BackgroundColor3 = selectedValues[opt] and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
+                    optBtn.TextColor3 = selectedValues[opt] and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
+                    btnLabel.Text = getDisplayText()
+                    if callback then callback(selectedValues) end
+                else
+                    selectedValues = opt
+                    for name, btn in pairs(optionButtons) do
+                        local match = (name == selectedValues)
+                        btn.BackgroundColor3 = match and Color3.fromRGB(25, 120, 240) or Color3.fromRGB(22, 26, 36)
+                        btn.TextColor3 = match and Color3.fromRGB(255, 255, 255) or Color3.fromRGB(180, 190, 210)
+                    end
+                    btnLabel.Text = getDisplayText()
+                    
+                    -- Close dropdown on single select
+                    isOpen = false
+                    arrow.Text = "v"
+                    TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                        Size = UDim2.new(1, -4, 0, baseHeight)
+                    }):Play()
+                    local tw = TweenService:Create(listContainer, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                        Size = UDim2.new(1, -16, 0, 0)
+                    })
+                    tw:Play()
+                    tw.Completed:Connect(function()
+                        if not isOpen then listContainer.Visible = false end
+                    end)
+
+                    if callback then callback(selectedValues) end
+                end
+            end)
+        end
+
+        local isOpen = false
+        dropdownBtn.MouseButton1Click:Connect(function()
+            isOpen = not isOpen
+            arrow.Text = isOpen and "^" or "v"
+
+            if isOpen then
+                listContainer.Visible = true
+                local contentH = (#options * 28) + 8
+                local totalH = baseHeight + contentH
+                TweenService:Create(card, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(1, -4, 0, totalH)
+                }):Play()
+                TweenService:Create(listContainer, TweenInfo.new(0.25, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                    Size = UDim2.new(1, -16, 0, contentH)
+                }):Play()
+            else
+                TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Size = UDim2.new(1, -4, 0, baseHeight)
+                }):Play()
+                local tw = TweenService:Create(listContainer, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {
+                    Size = UDim2.new(1, -16, 0, 0)
+                })
+                tw:Play()
+                tw.Completed:Connect(function()
+                    if not isOpen then listContainer.Visible = false end
+                end)
+            end
+        end)
+
+        return {
+            SetTitle = function(self, newText)
+                titleText = newText
+                title.Text = newText
+                card.Name = "Card_Dropdown_" .. newText
+            end
+        }
+    end
+
     function TabAPI:AddSlider(config)
         local titleText = config.Title or "Slider"
         local descText = config.Desc or ""
@@ -1225,7 +1373,7 @@ function Cheiz:CreateTab(tabName)
         local callback = config.Callback
 
         local hasDesc = descText ~= ""
-        local baseHeight = hasDesc and 48 or 40
+        local baseHeight = hasDesc and 46
 
         local card = Instance.new("Frame")
         card.Name = "Card_Slider_" .. titleText
@@ -1244,7 +1392,7 @@ function Cheiz:CreateTab(tabName)
 
         local title = Instance.new("TextLabel")
         title.Size = UDim2.new(1, -60, 0, 16)
-        title.Position = UDim2.fromOffset(10, hasDesc and 4 or 6)
+        title.Position = UDim2.fromOffset(10, hasDesc and 4 or 5)
         title.BackgroundTransparency = 1
         title.Text = titleText
         title.TextColor3 = Color3.fromRGB(255, 255, 255)
@@ -1256,7 +1404,7 @@ function Cheiz:CreateTab(tabName)
 
         local valLabel = Instance.new("TextLabel")
         valLabel.Size = UDim2.new(0, 50, 0, 16)
-        valLabel.Position = UDim2.new(1, -55, 0, hasDesc and 4 or 6)
+        valLabel.Position = UDim2.new(1, -55, 0, hasDesc and 4 or 5)
         valLabel.BackgroundTransparency = 1
         valLabel.Text = tostring(defaultVal)
         valLabel.TextColor3 = Color3.fromRGB(180, 190, 210)
@@ -1279,26 +1427,20 @@ function Cheiz:CreateTab(tabName)
         end
 
         local sliderBar = Instance.new("Frame")
-        sliderBar.Size = UDim2.new(1, -20, 0, 6)
-        sliderBar.Position = UDim2.new(0, 10, 0, hasDesc and 36 or 28)
+        sliderBar.Size = UDim2.new(1, -20, 0, 4)
+        sliderBar.Position = UDim2.new(0, 10, 0, hasDesc and 37 or 29)
         sliderBar.BackgroundColor3 = Color3.fromRGB(30, 35, 48)
+        sliderBar.BackgroundTransparency = Cheiz.WindowConfig.Transparent and Cheiz.WindowConfig.BackgroundTransparency or 0
         sliderBar.BorderSizePixel = 0
         sliderBar.Parent = card
-
-        local barCorner = Instance.new("UICorner")
-        barCorner.CornerRadius = UDim.new(1, 0)
-        barCorner.Parent = sliderBar
 
         local sliderFill = Instance.new("Frame")
         local initPercent = math.clamp((defaultVal - minVal) / (maxVal - minVal), 0, 1)
         sliderFill.Size = UDim2.new(initPercent, 0, 1, 0)
         sliderFill.BackgroundColor3 = Color3.fromRGB(25, 120, 240)
+        sliderFill.BackgroundTransparency = Cheiz.WindowConfig.Transparent and Cheiz.WindowConfig.BackgroundTransparency or 0
         sliderFill.BorderSizePixel = 0
         sliderFill.Parent = sliderBar
-
-        local fillCorner = Instance.new("UICorner")
-        fillCorner.CornerRadius = UDim.new(1, 0)
-        fillCorner.Parent = sliderFill
 
         local sliderBtn = Instance.new("TextButton")
         sliderBtn.Size = UDim2.new(1, 10, 1, 10)
@@ -1422,9 +1564,13 @@ function Cheiz:CreateTab(tabName)
         boxStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
         boxStroke.Parent = textBoxBg
 
-        local boxCorner = Instance.new("UICorner")
-        boxCorner.CornerRadius = UDim.new(0, 4)
-        boxCorner.Parent = textBoxBg
+        local focusLine = Instance.new("Frame")
+        focusLine.Size = UDim2.new(1, 0, 0, 2)
+        focusLine.Position = UDim2.new(0, 0, 1, -2)
+        focusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        focusLine.BackgroundTransparency = 1
+        focusLine.BorderSizePixel = 0
+        focusLine.Parent = textBoxBg
 
         local textInput = Instance.new("TextBox")
         textInput.Size = UDim2.new(1, -10, 1, 0)
@@ -1439,7 +1585,12 @@ function Cheiz:CreateTab(tabName)
         textInput.TextXAlignment = Enum.TextXAlignment.Left
         textInput.Parent = textBoxBg
 
+        textInput.Focused:Connect(function()
+            focusLine.BackgroundTransparency = 0
+        end)
+
         textInput.FocusLost:Connect(function(enterPressed)
+            focusLine.BackgroundTransparency = 1
             if callback then
                 callback(textInput.Text, enterPressed)
             end
@@ -1489,7 +1640,7 @@ function Cheiz:AddSearchFeatures(config)
     local searchFocusLine = Instance.new("Frame")
     searchFocusLine.Size = UDim2.new(1, 0, 0, 2)
     searchFocusLine.Position = UDim2.new(0, 0, 1, -2)
-    searchFocusLine.BackgroundColor3 = Color3.fromRGB(50, 120, 220)
+    searchFocusLine.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
     searchFocusLine.BackgroundTransparency = 1
     searchFocusLine.BorderSizePixel = 0
     searchFocusLine.Parent = BottomFrame
