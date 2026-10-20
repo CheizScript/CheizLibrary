@@ -1,3 +1,8 @@
+--[================================================================================]--
+--                               CHEIZ HUB UI LIBRARY                                 --
+--                               Full Source Code                                   --
+--[================================================================================]--
+
 local CoreGui = game:GetService("CoreGui")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
@@ -316,6 +321,12 @@ function Cheiz:AddWindow(config)
     local AspectRatioConstraint = Instance.new("UIAspectRatioConstraint")
     AspectRatioConstraint.AspectRatio = 430 / 300
     AspectRatioConstraint.Parent = MainBase
+
+    -- Added UISizeConstraint to control min/max window boundaries safely
+    local SizeConstraint = Instance.new("UISizeConstraint")
+    SizeConstraint.MinSize = Vector2.new(300, 200)
+    SizeConstraint.MaxSize = Vector2.new(800, 600)
+    SizeConstraint.Parent = MainBase
 
     local MainStroke = Instance.new("UIStroke")
     MainStroke.Color = Color3.fromRGB(0, 0, 0)
@@ -829,19 +840,6 @@ function Cheiz:AddWindow(config)
                 end
             end)
 
-            local originalAddLabel = TabAPI.AddLabel
-            -- We hook element creation dynamically to assign to the active section group
-            local function wrapElement(creatorFunc)
-                return function(self, config)
-                    local elementCard = creatorFunc(self, config)
-                    if elementCard then
-                        elementCard:SetAttribute("OriginalHeight", elementCard.AbsoluteSize.Y > 0 and elementCard.AbsoluteSize.Y or 34)
-                        registerElement(elementCard)
-                    end
-                    return elementCard
-                end
-            end
-
             return {
                 SetTitle = function(self, t)
                     sectionTitle = t
@@ -1317,8 +1315,16 @@ function Cheiz:AddWindow(config)
                                         dropdownConfig.Callback(list)
                                     end
                                 else
-                                    selectedValues = {[opt] = true}
-                                    labelText.Text = opt
+                                    if selectedValues[opt] then
+                                        selectedValues = {}
+                                        labelText.Text = "Select..."
+                                        if dropdownConfig.Callback then dropdownConfig.Callback(nil) end
+                                    else
+                                        selectedValues = {[opt] = true}
+                                        labelText.Text = opt
+                                        if dropdownConfig.Callback then dropdownConfig.Callback(opt) end
+                                    end
+
                                     renderNestedOptions(searchBox and searchBox.Text or "")
                                     dropIsOpen = false
                                     arrowText.Text = "v"
@@ -1328,7 +1334,6 @@ function Cheiz:AddWindow(config)
                                     TweenService:Create(dropContainer, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                                         Size = UDim2.new(1, -16, 0, 34)
                                     }):Play()
-                                    if dropdownConfig.Callback then dropdownConfig.Callback(opt) end
                                 end
                             end)
                         end
@@ -1382,7 +1387,7 @@ function Cheiz:AddWindow(config)
                         dropIsOpen = false
                         TweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                             Size = UDim2.new(1, -4, 0, baseHeight)
-                         }):Play()
+                        }):Play()
                         TweenService:Create(dropContainer, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
                             Size = UDim2.new(1, -16, 0, 0)
                         }):Play()
@@ -1489,7 +1494,7 @@ function Cheiz:AddWindow(config)
             labelText.Size = UDim2.new(1, -20, 1, 0)
             labelText.Position = UDim2.fromOffset(6, 0)
             labelText.BackgroundTransparency = 1
-            labelText.Text = type(defaultOption) == "table" and table.concat(defaultOption, ", ") or tostring(defaultOption)
+            labelText.Text = type(defaultOption) == "table" and (#defaultOption > 0 and table.concat(defaultOption, ", ") or "Select...") or (defaultOption or "Select...")
             labelText.TextColor3 = Color3.fromRGB(255, 255, 255)
             labelText.TextSize = 11
             labelText.Font = Enum.Font.GothamSemibold
@@ -1580,7 +1585,7 @@ function Cheiz:AddWindow(config)
                     selectedValues[defaultOption] = true
                 end
             else
-                selectedValues[defaultOption] = true
+                if defaultOption then selectedValues[defaultOption] = true end
             end
 
             local function isSelected(opt) return selectedValues[opt] == true end
@@ -1654,15 +1659,21 @@ function Cheiz:AddWindow(config)
                                 for k, v in pairs(selectedValues) do
                                     if v then table.insert(list, k) end
                                 end
-                                labelText.Text = (#list > 0) and table.concat(list, ", ") or "None"
+                                labelText.Text = (#list > 0) and table.concat(list, ", ") or "Select..."
                                 renderOptions(searchBox and searchBox.Text or "")
                                 if callback then callback(list) end
                             else
-                                selectedValues = {[opt] = true}
-                                labelText.Text = opt
+                                if selectedValues[opt] then
+                                    selectedValues = {}
+                                    labelText.Text = "Select..."
+                                    if callback then callback(nil) end
+                                else
+                                    selectedValues = {[opt] = true}
+                                    labelText.Text = opt
+                                    if callback then callback(opt) end
+                                end
                                 renderOptions(searchBox and searchBox.Text or "")
                                 setExpandState(false)
-                                if callback then callback(opt) end
                             end
                         end)
                     end
@@ -1948,15 +1959,6 @@ function Cheiz:AddWindow(config)
                 end
             }
         end
-
-        -- Wrap element creators automatically so they bind to sections properly if desired
-        local originalAddLabel = TabAPI.AddLabel
-        local originalAddButton = TabAPI.AddButton
-        local originalAddKeybind = TabAPI.AddKeybind
-        local originalAddToggle = TabAPI.AddToggle
-        local originalAddDropdown = TabAPI.AddDropdown
-        local originalAddSlider = TabAPI.AddSlider
-        local originalAddTextBox = TabAPI.AddTextBox
 
         return TabAPI
     end
